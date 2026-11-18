@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Admins · Manage{% endblock %}
+{% block content %}
+  <p><a href="{% url 'events:manage_home' %}" class="link">← Manage</a></p>
+  <h1 class="mt-2">Admins</h1>
+  <p class="mt-1">Every admin has the same rights. The last admin can't be removed.</p>
+
+  <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+    <section class="card lg:col-span-2">
+      <table class="table">
+        <thead><tr><th>Name</th><th>Username</th><th><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          {% for admin in admins %}
+            <tr>
+              <td class="font-semibold">{{ admin.get_full_name|default:admin.username }}{% if admin.pk == user.pk %} <span class="chip">You</span>{% endif %}</td>
+              <td>@{{ admin.username }}</td>
+              <td class="text-right">
+                {% if admins|length > 1 %}
+                  <form method="post" action="{% url 'accounts:remove_admin' admin.pk %}" onsubmit="return confirm('Remove {{ admin.username|escapejs }} as an admin?')">
+                    {% csrf_token %}
+                    <button class="btn-danger btn-small">Remove</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <div class="space-y-6">
+      <section class="card">
+        <h2>Make someone an admin</h2>
+        <p class="help">They need an account already.</p>
+        <form method="post" class="mt-4 space-y-4">
+          {% csrf_token %}
+          <input type="hidden" name="promote" value="1">
+          {% include "includes/form_fields.html" with form=promote_form %}
+          <button type="submit" class="btn-primary">Make admin</button>
+        </form>
+      </section>
+
+      <details class="card" {% if create_form.errors %}open{% endif %}>
+        <summary class="cursor-pointer text-lg font-semibold text-court hover:underline">Create a new admin account</summary>
+        <form method="post" class="mt-4 space-y-4">
+          {% csrf_token %}
+          <input type="hidden" name="create" value="1">
+          {% include "includes/form_fields.html" with form=create_form %}
+          <button type="submit" class="btn-primary">Create admin</button>
+        </form>
+      </details>
+    </div>
+  </div>
+{% endblock %}

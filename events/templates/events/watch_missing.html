@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Code not found · Pickleball{% endblock %}
+{% block content %}
+  <div class="page-narrow card">
+    <h1>We couldn't find that event.</h1>
+    <p class="mt-2">The code may have changed or been turned off. Ask the organizer for the current one.</p>
+    <p class="mt-4"><a href="{% url 'events:join_enter' %}" class="link">Try another code</a></p>
+  </div>
+{% endblock %}

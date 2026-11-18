@@ -57,6 +57,17 @@ def test_unknown_database_scheme_is_rejected():
         parse_database_url("mysql://x@y/z", Path("/project"))
 
 
+def test_built_css_includes_app_template_classes():
+    """Catches a broken @source line in assets/tailwind.css, or a forgotten rebuild.
+
+    These classes appear only in app templates (not templates/), and the
+    desktop layouts depend on the lg: breakpoint.
+    """
+    css = (Path(settings.BASE_DIR) / "static" / "css" / "app.css").read_text(encoding="utf-8")
+    for needle in [r".sr-only{", r"lg\:grid-cols-3", r"lg\:col-span-2", r"max-md\:hidden", r"page-narrow"]:
+        assert needle in css, f"{needle} missing from static/css/app.css. Rebuild Tailwind."
+
+
 @pytest.mark.django_db
 def test_home_page_renders_with_base_template(client):
     response = client.get(reverse("core:home"))

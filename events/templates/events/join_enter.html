@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Enter a code · Pickleball{% endblock %}
+{% block content %}
+  <div class="page-narrow card">
+    <h1>Enter your code</h1>
+    <p class="mt-2">Player codes, spectator codes, and team codes all work here.</p>
+    <form method="get" class="mt-6 space-y-6">
+      {% include "includes/form_fields.html" with form=form %}
+      <button type="submit" class="btn-primary">Go</button>
+    </form>
+  </div>
+{% endblock %}

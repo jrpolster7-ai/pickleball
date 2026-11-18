@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Claim your profile · Pickleball{% endblock %}
+{% block content %}
+  <div class="page-narrow card">
+    <h1>Hi, {{ player.first_name }}!</h1>
+    <p class="mt-2">Pick a username and password. You'll use them to sign in.</p>
+    <form method="post" class="mt-6 space-y-6">
+      {% csrf_token %}
+      {% include "includes/form_fields.html" with form=form %}
+      <button type="submit" class="btn-primary">Create my account</button>
+    </form>
+  </div>
+{% endblock %}

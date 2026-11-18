@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Players · Manage{% endblock %}
+{% block content %}
+  <p><a href="{% url 'events:manage_home' %}" class="link">← Manage</a></p>
+  <h1 class="mt-2">Players</h1>
+
+  <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+    <section class="card lg:col-span-2">
+      <form method="get" class="flex gap-2">
+        <input type="search" name="q" value="{{ q }}" placeholder="Search by name" aria-label="Search by name">
+        <button class="btn-secondary max-sm:!w-auto">Search</button>
+      </form>
+
+      <table class="table mt-4">
+        <thead>
+          <tr><th>Name</th><th class="max-sm:hidden">Gender</th><th>Login</th></tr>
+        </thead>
+        <tbody>
+          {% for player in players %}
+            <tr>
+              <td><a href="{% url 'accounts:manage_player' player.pk %}" class="link">{{ player.full_name }}</a></td>
+              <td class="max-sm:hidden">{{ player.get_gender_display|default:"—" }}</td>
+              <td>{% if player.user %}@{{ player.user.username }}{% else %}<span class="chip">Not claimed</span>{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3">No players{% if q %} match “{{ q }}”{% else %} yet{% endif %}.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="card">
+      <h2>Add a player</h2>
+      <p class="help">For someone without an account. They get a claim code to set up their login.</p>
+      <form method="post" class="mt-4 space-y-4">
+        {% csrf_token %}
+        {% include "includes/form_fields.html" with form=form %}
+        <button type="submit" class="btn-primary">Add player</button>
+      </form>
+    </aside>
+  </div>
+{% endblock %}

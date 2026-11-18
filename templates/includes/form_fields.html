@@ -1,0 +1,8 @@
+{# All fields of a form, stacked. Usage: include with form=form #}
+{% for error in form.non_field_errors %}<p class="error">{{ error }}</p>{% endfor %}
+{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+<div class="space-y-4">
+  {% for field in form.visible_fields %}
+    {% include "includes/field.html" with field=field %}
+  {% endfor %}
+</div>

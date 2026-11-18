@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Link profile · Pickleball{% endblock %}
+{% block content %}
+  <div class="page-narrow card">
+    <h1>Is this you?</h1>
+    <p class="mt-2">The organizer added <strong>{{ player.full_name }}</strong>. You're signed in as <strong>@{{ user.username }}</strong>.</p>
+    <p class="mt-2">Linking moves that profile's events and team into your account.</p>
+    <form method="post" class="mt-6">
+      {% csrf_token %}
+      <button type="submit" class="btn-primary">Link to my account</button>
+    </form>
+    <p class="mt-4 text-sm">Not you? <a href="{% url 'core:home' %}" class="link">Go back home</a></p>
+  </div>
+{% endblock %}

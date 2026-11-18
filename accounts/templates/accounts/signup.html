@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Create an account · Pickleball{% endblock %}
+{% block content %}
+  <div class="page-narrow">
+    <div class="card">
+      <h1>Create an account</h1>
+      <p class="mt-2">Just a username and password. No email needed.</p>
+      <form method="post" class="mt-6 space-y-6">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        {% include "includes/form_fields.html" with form=form %}
+        <button type="submit" class="btn-primary">Create account</button>
+      </form>
+    </div>
+    <p class="mt-6">Already have an account? <a href="{% url 'accounts:login' %}?next={{ next|urlencode }}" class="link">Sign in</a></p>
+    <p class="mt-2 text-sm">Did the organizer give you a claim code? <a href="{% url 'accounts:claim_start' %}" class="link">Claim your profile</a> instead.</p>
+  </div>
+{% endblock %}

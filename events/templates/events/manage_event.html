@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} · Manage{% endblock %}
+{% block content %}
+  <p><a href="{% url 'events:manage_home' %}" class="link">← Manage</a></p>
+
+  <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <div class="flex flex-wrap items-center gap-3">
+        <h1>{{ event.title }}</h1>
+        <span class="chip">{{ event.get_status_display }}</span>
+      </div>
+      <p class="mt-1">{{ event.level }} · {{ event.division }} · {{ event.location }}</p>
+      <p class="text-sm">
+        {{ event.start_date|date:"D, M j, Y" }}{% if event.is_multi_week %} to {{ event.end_date|date:"D, M j" }} · {{ event.weeks }} weeks on {{ event.get_weekly_day_display }}s{% endif %} · starts {{ event.start_time|time:"g:i A" }}
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 max-sm:w-full">
+      <a href="{% url 'events:event_edit' event.pk %}" class="btn-secondary">Edit settings</a>
+      {% if event.status == "DRAFT" %}
+        <form method="post" action="{% url 'events:set_status' event.pk %}" class="max-sm:w-full">{% csrf_token %}<input type="hidden" name="status" value="OPEN"><button class="btn-primary">Open sign-ups</button></form>
+      {% elif event.status == "OPEN" %}
+        <form method="post" action="{% url 'events:set_status' event.pk %}" class="max-sm:w-full">{% csrf_token %}<input type="hidden" name="status" value="DRAFT"><button class="btn-secondary">Back to draft</button></form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+    {# --- Main column --- #}
+    <div class="space-y-6 lg:col-span-2">
+
+      {# Players #}
+      <section class="card">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2>Players ({{ registrations|length }} of {{ event.player_capacity }})</h2>
+        </div>
+        <table class="table mt-3">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th class="max-sm:hidden">Gender</th>
+              {% if not event.is_scramble %}<th class="max-md:hidden">Team</th>{% endif %}
+              <th><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for reg in registrations %}
+              <tr>
+                <td>
+                  <a href="{% url 'accounts:manage_player' reg.player.pk %}" class="link">{{ reg.player.full_name }}</a>
+                  {% if not event.is_scramble %}<span class="block text-sm md:hidden">{% if reg.team %}{{ reg.team.name }}{% else %}No partner yet{% endif %}</span>{% endif %}
+                </td>
+                <td class="max-sm:hidden">{{ reg.player.get_gender_display|default:"—" }}</td>
+                {% if not event.is_scramble %}<td class="max-md:hidden">{% if reg.team %}{{ reg.team.name }}{% else %}<span class="text-stone-500">No partner yet</span>{% endif %}</td>{% endif %}
+                <td class="text-right">
+                  <div class="flex flex-wrap justify-end gap-2">
+                    {% if move_form.fields.to_event.queryset.exists %}
+                      <details class="relative">
+                        <summary class="btn-secondary btn-small list-none">Move</summary>
+                        <form method="post" action="{% url 'events:admin_move_player' event.pk reg.player.pk %}" class="card absolute right-0 z-10 mt-2 w-72 space-y-3 text-left shadow-lg">
+                          {% csrf_token %}
+                          {% include "includes/field.html" with field=move_form.to_event %}
+                          {% include "includes/field.html" with field=move_form.override %}
+                          <button class="btn-primary btn-small">Move player</button>
+                        </form>
+                      </details>
+                    {% endif %}
+                    <form method="post" action="{% url 'events:admin_remove_player' event.pk reg.player.pk %}" onsubmit="return confirm('Remove {{ reg.player.full_name|escapejs }} from this event?')">
+                      {% csrf_token %}<button class="btn-danger btn-small">Remove</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4">No one yet. Share the player code, or add players.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      {# Teams #}
+      {% if not event.is_scramble %}
+        <section class="card">
+          <h2>Teams ({{ sides|length }}{% if event.team_count %} of {{ event.team_count }}{% endif %})</h2>
+          <table class="table mt-3">
+            <thead><tr><th>Team</th><th class="max-sm:hidden">Team code</th><th><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              {% for side in sides %}
+                <tr>
+                  <td><span class="font-semibold">{{ side.name }}</span>{% if side.players.all|length < 2 %} <span class="chip">Needs a partner</span>{% endif %}</td>
+                  <td class="font-mono max-sm:hidden">{{ side.team_code }}</td>
+                  <td class="text-right">
+                    <form method="post" action="{% url 'events:admin_delete_team' event.pk side.pk %}" onsubmit="return confirm('Split up this team? Both players stay in the event.')">
+                      {% csrf_token %}<button class="btn-danger btn-small">Split up</button>
+                    </form>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3">No teams yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+      {% endif %}
+
+      {# Format summary #}
+      <section class="card">
+        <h2>Format</h2>
+        <dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
+          {% if not event.is_scramble %}
+            <dt class="font-semibold">Teams</dt><dd>{{ event.team_count }}</dd>
+            <dt class="font-semibold">Matches per team</dt><dd>{% if per_team_low == per_team_high %}{{ per_team_low }}{% else %}{{ per_team_low }} or {{ per_team_high }}{% endif %} ({{ event.total_matches }} total)</dd>
+            <dt class="font-semibold">Full round robin</dt><dd>{{ full_rr.0 }} per team ({{ full_rr.1 }} total), for reference</dd>
+          {% endif %}
+          <dt class="font-semibold">Courts</dt><dd>{{ event.court_count }}</dd>
+          <dt class="font-semibold">Games</dt><dd>{{ event.get_games_per_match_display }} to {{ event.points_to_win }}{% if event.win_by_two %}, win by 2{% endif %}{% if event.point_cap %}, cap {{ event.point_cap }}{% endif %}</dd>
+          <dt class="font-semibold">Timing</dt><dd>{{ event.minutes_per_match }} min matches, {{ event.break_minutes }} min between rounds</dd>
+          <dt class="font-semibold">Sign-ups</dt><dd>{{ event.get_registration_mode_display }}{% if event.players_enter_scores %} · players enter scores{% endif %}</dd>
+          <dt class="font-semibold">Bracket</dt><dd>{{ event.get_bracket_type_display }}, {{ event.get_bracket_sizing_display|lower }}{% if event.third_place_match %}, 3rd place match{% endif %}</dd>
+        </dl>
+      </section>
+    </div>
+
+    {# --- Side column --- #}
+    <aside class="space-y-6">
+      {% include "events/_code_card.html" with kind="player" label="Player code" code=event.player_code enabled=event.player_code_enabled url=player_url about="Players use this to join." %}
+      {% include "events/_code_card.html" with kind="spectator" label="Spectator code" code=event.spectator_code enabled=event.spectator_code_enabled url=spectator_url about="Anyone can follow results. No account needed." %}
+
+      <section class="card">
+        <h2>Add a player</h2>
+        {% if add_form.fields.player.queryset.exists %}
+          <form method="post" action="{% url 'events:admin_add_player' event.pk %}" class="mt-4 space-y-4">
+            {% csrf_token %}
+            {% include "includes/form_fields.html" with form=add_form %}
+            <button class="btn-primary">Add</button>
+          </form>
+        {% endif %}
+        <p class="help">Someone new? <a href="{% url 'accounts:manage_players' %}" class="link">Add them on the Players page</a> first.</p>
+      </section>
+
+      {% if not event.is_scramble and team_form.fields.player_a.queryset.count >= 2 %}
+        <section class="card">
+          <h2>Make a team by hand</h2>
+          <form method="post" action="{% url 'events:admin_build_team' event.pk %}" class="mt-4 space-y-4">
+            {% csrf_token %}
+            {% include "includes/form_fields.html" with form=team_form %}
+            <button class="btn-primary">Make team</button>
+          </form>
+        </section>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

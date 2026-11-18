@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Saved settings · Manage{% endblock %}
+{% block content %}
+  <p><a href="{% url 'events:manage_home' %}" class="link">← Manage</a></p>
+  <h1 class="mt-2">Saved settings</h1>
+  <p class="mt-1">New events start with these. Creating an event also updates them to match.</p>
+  <form method="post" class="card mt-6">
+    {% csrf_token %}
+    {% for error in form.non_field_errors %}<p class="error">{{ error }}</p>{% endfor %}
+    <div class="grid gap-x-6 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
+      {% for field in form.visible_fields %}
+        {% include "includes/field.html" with field=field %}
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn-primary mt-6">Save</button>
+  </form>
+{% endblock %}

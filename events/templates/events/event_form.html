@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{% if creating %}New event{% else %}Edit {{ event.title }}{% endif %} · Manage{% endblock %}
+{% block content %}
+  <p>{% if event %}<a href="{% url 'events:manage_event' event.pk %}" class="link">← {{ event.title }}</a>{% else %}<a href="{% url 'events:manage_home' %}" class="link">← Manage</a>{% endif %}</p>
+  <h1 class="mt-2">{% if creating %}New event{% else %}Edit event{% endif %}</h1>
+
+  <form method="post" class="mt-6" id="event-form">
+    {% csrf_token %}
+    {% for error in form.non_field_errors %}<p class="error">{{ error }}</p>{% endfor %}
+    <div class="grid items-start gap-6 lg:grid-cols-2">
+      {% for title, fields in form.grouped_fields %}
+        <fieldset class="card">
+          <legend class="sr-only">{{ title }}</legend>
+          <h2 aria-hidden="true">{{ title }}</h2>
+          <div class="mt-4 grid gap-x-4 gap-y-4 sm:grid-cols-2">
+            {% for field in fields %}
+              <div class="{% if field.name == 'title' or field.name == 'location' %}sm:col-span-2{% endif %}">
+                {% include "includes/field.html" with field=field %}
+              </div>
+            {% endfor %}
+          </div>
+          {% if title == "Teams and matches" %}
+            <p class="mt-4 rounded-lg bg-mist px-4 py-3 text-sm" id="match-hint" aria-live="polite"></p>
+          {% endif %}
+        </fieldset>
+      {% endfor %}
+    </div>
+    <div class="sticky bottom-0 -mx-6 mt-6 border-t border-line bg-mist/95 px-6 py-4 max-sm:-mx-4 max-sm:px-4">
+      <button type="submit" class="btn-primary">{% if creating %}Create event{% else %}Save changes{% endif %}</button>
+      {% if event %}<a href="{% url 'events:manage_event' event.pk %}" class="link ml-4 max-sm:ml-0 max-sm:mt-3 max-sm:block max-sm:text-center">Cancel</a>{% endif %}
+    </div>
+  </form>
+
+  <script>
+    // Keep matches per team and total matches in step (CLAUDE.md section 4).
+    // The server does the same math, so this is only a convenience.
+    (function () {
+      const teams = document.getElementById("id_team_count");
+      const perTeam = document.getElementById("id_matches_per_team");
+      const total = document.getElementById("id_total_matches");
+      const hint = document.getElementById("match-hint");
+      const num = (el) => parseInt(el.value, 10);
+
+      function describe() {
+        const n = num(teams), t = num(total);
+        if (!(n >= 2)) { hint.textContent = "Enter the number of teams to see match counts."; return; }
+        const fullPer = n - 1, fullTotal = n * (n - 1) / 2;
+        let text = `For reference, a full round robin is ${fullPer} matches per team (${fullTotal} total). That's a hint, not a limit.`;
+        if (t >= 1) {
+          const slots = 2 * t, low = Math.floor(slots / n), high = low + (slots % n ? 1 : 0);
+          text += low === high ? ` Every team plays ${low}.` : ` Some teams play ${low} and some play ${high}.`;
+        }
+        hint.textContent = text;
+      }
+      function fromPerTeam() {
+        const n = num(teams), p = num(perTeam);
+        if (n >= 2 && p >= 1) total.value = Math.ceil(n * p / 2);
+        describe();
+      }
+      function fromTotal() {
+        const n = num(teams), t = num(total);
+        if (n >= 2 && t >= 1) perTeam.value = Math.floor(2 * t / n);
+        describe();
+      }
+      teams.addEventListener("input", fromPerTeam);
+      perTeam.addEventListener("input", fromPerTeam);
+      total.addEventListener("input", fromTotal);
+      describe();
+    })();
+  </script>
+{% endblock %}

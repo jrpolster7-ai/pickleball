@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Manage · Pickleball{% endblock %}
+{% block content %}
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <h1>Manage</h1>
+    <nav class="flex flex-wrap gap-2" aria-label="Manage sections">
+      <a href="{% url 'accounts:manage_players' %}" class="btn-secondary btn-small">Players</a>
+      <a href="{% url 'accounts:manage_admins' %}" class="btn-secondary btn-small">Admins</a>
+      <a href="{% url 'events:edit_defaults' %}" class="btn-secondary btn-small">Saved settings</a>
+    </nav>
+  </div>
+
+  <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+    <section class="card lg:col-span-2">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2>Events</h2>
+        <div class="flex flex-wrap gap-2 max-sm:w-full">
+          {% if has_events %}<a href="{% url 'events:event_create' %}?copy=last" class="btn-secondary btn-small">Copy last event</a>{% endif %}
+          <a href="{% url 'events:event_create' %}" class="btn-primary btn-small">New event</a>
+        </div>
+      </div>
+      <table class="table mt-4">
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th class="max-md:hidden">Type</th>
+            <th>Date</th>
+            <th class="max-sm:hidden">Players</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for event in events %}
+            <tr>
+              <td><a href="{% url 'events:manage_event' event.pk %}" class="link">{{ event.title }}</a></td>
+              <td class="max-md:hidden">{{ event.level }} · {{ event.division }}</td>
+              <td class="whitespace-nowrap">{{ event.start_date|date:"M j, Y" }}{% if event.weeks > 1 %}<span class="block text-sm">{{ event.weeks }} weeks</span>{% endif %}</td>
+              <td class="max-sm:hidden">{{ event.player_total }}</td>
+              <td><span class="chip whitespace-nowrap">{{ event.get_status_display }}</span></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5">No events yet. Use Quick create to make your first one.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="card">
+      <h2>Quick create</h2>
+      <p class="help">Pick the basics. Everything else comes from your saved settings.</p>
+      <form method="post" action="{% url 'events:quick_create' %}" class="mt-4 space-y-4">
+        {% csrf_token %}
+        {% include "includes/form_fields.html" with form=quick_form %}
+        <button type="submit" class="btn-primary">Create event</button>
+      </form>
+    </aside>
+  </div>
+{% endblock %}

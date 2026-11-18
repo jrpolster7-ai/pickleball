@@ -1,0 +1,6 @@
+<form method="get" action="{% url 'events:join_enter' %}" class="card space-y-4">
+  <h2>Enter a code</h2>
+  <p class="help !mt-0">Player, spectator, and team codes all work here.</p>
+  {% include "includes/field.html" with field=code_form.code %}
+  <button type="submit" class="btn-primary">Go</button>
+</form>

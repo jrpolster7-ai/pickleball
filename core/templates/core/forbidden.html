@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Not allowed · Pickleball{% endblock %}
+{% block content %}
+  <div class="page-narrow card">
+    <h1>Sorry, that page is for organizers.</h1>
+    <p class="mt-3"><a href="{% url 'core:home' %}" class="link">Go back home</a></p>
+  </div>
+{% endblock %}

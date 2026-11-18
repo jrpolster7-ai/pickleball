@@ -1,0 +1,27 @@
+{# Renders one form field with label, help, and errors. Usage: include with field=form.x #}
+{% with widget=field.field.widget.input_type %}
+<div class="field" id="field-{{ field.html_name }}">
+  {% if widget == "checkbox" %}
+    <label class="flex min-h-10 cursor-pointer items-center gap-3 pointer-coarse:min-h-12">
+      {{ field }}
+      <span class="font-semibold">{{ field.label }}</span>
+    </label>
+  {% elif widget == "radio" %}
+    <fieldset>
+      <legend class="label">{{ field.label }}</legend>
+      <div class="flex flex-wrap gap-2">
+        {% for choice in field %}
+          <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-line bg-white px-4 hover:border-court pointer-coarse:min-h-12">
+            {{ choice.tag }} <span>{{ choice.choice_label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+  {% else %}
+    <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+  {% endif %}
+  {% if field.help_text %}<p class="help">{{ field.help_text|safe }}</p>{% endif %}
+  {% for error in field.errors %}<p class="error">{{ error }}</p>{% endfor %}
+</div>
+{% endwith %}

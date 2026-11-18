@@ -3,25 +3,75 @@
 
 /* Tell Tailwind where to look for class names. */
 @source "../templates";
-@source "../*/templates";
+@source "../*/templates/**/*.html";
+@source "../*/forms.py";
 
 /*
-  Brand colors (ASSUMED palette, CLAUDE.md section 14).
-  Change them here and rebuild. Utilities like bg-court and text-ball come from these.
+  Desktop browser first (CLAUDE.md section 14). Layouts are designed for a wide
+  screen, then collapse to one column below the lg breakpoint for tablets and phones.
+
+  Brand colors (ASSUMED palette). Change them here and rebuild.
+  Utilities like bg-court and text-ball come from these.
 */
 @theme {
   --color-court: #0F5C4D;   /* deep court green */
+  --color-court-dark: #0B4A3E;
   --color-ball: #C6E800;    /* pickleball yellow-green */
+  --color-ball-dark: #B3D100;
   --color-ink: #44403C;     /* warm gray text */
   --color-mist: #F5F5F4;    /* light warm gray background */
+  --color-line: #E7E5E4;    /* borders */
+  --color-alert: #B91C1C;   /* errors */
+}
+
+@layer base {
+  h1 { @apply text-3xl font-bold text-court max-lg:text-2xl; }
+  h2 { @apply text-lg font-semibold text-court; }
+  a { @apply underline-offset-2; }
+
+  /*
+    Form controls: comfortable with a mouse, taller on touch screens.
+    16px text so phone browsers don't zoom in.
+  */
+  input[type="text"], input[type="password"], input[type="number"], input[type="date"],
+  input[type="time"], input[type="search"], select, textarea {
+    @apply block w-full min-h-10 rounded-lg border border-line bg-white px-3 text-base text-ink pointer-coarse:min-h-12;
+  }
+  input:hover, select:hover, textarea:hover { @apply border-stone-400; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible {
+    @apply outline-3 outline-offset-1 outline-court;
+  }
+  input[type="checkbox"], input[type="radio"] { @apply h-5 w-5 accent-court pointer-coarse:h-6 pointer-coarse:w-6; }
 }
 
 @layer components {
-  /* Large tap target: at least 48px tall, full width on phones. */
-  .btn-primary {
-    @apply inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-ball px-6 text-lg font-semibold text-court sm:w-auto;
+  /* Buttons size to their label on desktop and go full width on phones. */
+  .btn, .btn-primary, .btn-secondary, .btn-danger {
+    @apply inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg px-5 text-base font-semibold no-underline transition-colors pointer-coarse:min-h-12 max-sm:w-full;
   }
-  .btn-primary:focus-visible {
+  .btn:focus-visible, .btn-primary:focus-visible, .btn-secondary:focus-visible, .btn-danger:focus-visible {
     @apply outline-4 outline-offset-2 outline-court;
   }
+  .btn-primary { @apply bg-ball text-court hover:bg-ball-dark; }
+  .btn-secondary { @apply border-2 border-court bg-white text-court hover:bg-mist; }
+  .btn-danger { @apply border-2 border-alert bg-white text-alert hover:bg-red-50; }
+  .btn-small { @apply min-h-8 px-3 text-sm pointer-coarse:min-h-10 max-sm:w-auto; }
+
+  .card { @apply rounded-xl border border-line bg-white p-5; }
+  a.card { @apply transition-colors hover:border-court; }
+  .label { @apply mb-1 block font-semibold; }
+  .help { @apply mt-1 text-sm text-stone-500; }
+  .error { @apply mt-1 text-sm font-semibold text-alert; }
+  .chip { @apply inline-block rounded-full bg-mist px-3 py-1 text-sm; }
+  .code { @apply font-mono text-2xl font-bold tracking-widest text-court; }
+  .link { @apply font-semibold text-court underline hover:text-court-dark; }
+
+  /* A centered, readable column for short pages like sign-in. */
+  .page-narrow { @apply mx-auto max-w-lg; }
+
+  /* Data tables for lists on desktop. Less important columns hide on small screens. */
+  .table { @apply w-full border-collapse text-left; }
+  .table th { @apply border-b-2 border-line px-3 py-2 text-sm font-semibold text-stone-500; }
+  .table td { @apply border-b border-line px-3 py-3 align-middle; }
+  .table tbody tr { @apply hover:bg-mist; }
 }

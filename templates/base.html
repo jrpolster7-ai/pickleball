@@ -2,33 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0F5C4D">
   <title>{% block title %}Pickleball{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   {% block head %}{% endblock %}
 </head>
-<body class="min-h-screen bg-white text-ink antialiased" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="flex min-h-screen flex-col bg-mist text-ink antialiased" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <header class="bg-court text-white">
-    <div class="mx-auto flex max-w-screen-md items-center gap-3 px-4 py-3">
-      <a href="{% url 'core:home' %}" class="flex items-center gap-3 min-h-12">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-1 px-6 py-3 max-sm:px-4">
+      <a href="{% url 'core:home' %}" class="flex min-h-10 items-center gap-3 no-underline">
         {# Logo slot. Swap this span for an <img> when Mrs. Carter supplies a logo. #}
         <span class="logo-slot grid h-10 w-10 place-items-center rounded-full bg-ball font-bold text-court" aria-hidden="true">P</span>
-        <span class="text-lg font-semibold">{% block site_name %}Pickleball{% endblock %}</span>
+        <span class="text-xl font-semibold">Pickleball</span>
       </a>
+      <nav class="ml-auto flex items-center gap-6 font-semibold max-sm:gap-4 max-sm:text-sm" aria-label="Main">
+        {% if user.is_authenticated %}
+          <a href="{% url 'core:home' %}" class="py-2 hover:text-ball">My events</a>
+          {% if user.is_staff %}<a href="{% url 'events:manage_home' %}" class="py-2 hover:text-ball">Manage</a>{% endif %}
+          <a href="{% url 'accounts:profile' %}" class="py-2 hover:text-ball">{{ user.first_name|default:user.username }}</a>
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="cursor-pointer py-2 font-semibold hover:text-ball">Sign out</button>
+          </form>
+        {% else %}
+          <a href="{% url 'events:join_enter' %}" class="py-2 hover:text-ball">Enter a code</a>
+          <a href="{% url 'accounts:login' %}" class="py-2 hover:text-ball">Sign in</a>
+        {% endif %}
+      </nav>
     </div>
   </header>
 
   {% if messages %}
-    <div class="mx-auto max-w-screen-md px-4 pt-4 space-y-2">
+    <div class="mx-auto w-full max-w-6xl space-y-2 px-6 pt-6 max-sm:px-4" role="status">
       {% for message in messages %}
-        <p class="rounded-lg bg-mist px-4 py-3">{{ message }}</p>
+        <p class="rounded-lg border px-4 py-3 {% if message.tags == 'error' %}border-red-200 bg-red-50 font-semibold text-alert{% else %}border-line bg-white{% endif %}">{{ message }}</p>
       {% endfor %}
     </div>
   {% endif %}
 
-  <main class="mx-auto max-w-screen-md px-4 py-6">
+  <main class="mx-auto w-full max-w-6xl flex-1 px-6 py-8 max-sm:px-4 max-sm:py-6">
     {% block content %}{% endblock %}
   </main>
 </body>

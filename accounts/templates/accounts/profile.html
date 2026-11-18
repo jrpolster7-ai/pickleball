@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}My profile · Pickleball{% endblock %}
+{% block content %}
+  <div class="page-narrow card">
+    <h1>My profile</h1>
+    <p class="mt-2 text-sm">Signed in as <strong>{{ user.username }}</strong></p>
+    <form method="post" class="mt-6 space-y-6">
+      {% csrf_token %}
+      {% include "includes/form_fields.html" with form=form %}
+      <button type="submit" class="btn-primary">Save</button>
+    </form>
+  </div>
+{% endblock %}

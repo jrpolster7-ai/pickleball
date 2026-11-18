@@ -1,8 +1,59 @@
 {% extends "base.html" %}
 
-{% block title %}Welcome · Pickleball{% endblock %}
+{% block title %}Pickleball{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-bold text-court">Welcome!</h1>
-  <p class="mt-2">The tournament app is getting set up. Check back soon.</p>
+  {% if user.is_authenticated %}
+    <h1>Hi, {{ user.first_name|default:user.username }}!</h1>
+
+    <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+      <div class="space-y-6 lg:col-span-2">
+        {% if invites %}
+          <section class="space-y-3">
+            <h2>Team invites</h2>
+            {% for invite in invites %}
+              <div class="card flex flex-wrap items-center justify-between gap-4">
+                <p><strong>{{ invite.invited_by.full_name }}</strong> wants you as their partner in <strong>{{ invite.side.event.title }}</strong>.</p>
+                <div class="flex gap-2 max-sm:w-full">
+                  <form method="post" action="{% url 'events:invite_action' invite.pk 'accept' %}" class="max-sm:flex-1">{% csrf_token %}<button class="btn-primary">Accept</button></form>
+                  <form method="post" action="{% url 'events:invite_action' invite.pk 'decline' %}" class="max-sm:flex-1">{% csrf_token %}<button class="btn-secondary">No thanks</button></form>
+                </div>
+              </div>
+            {% endfor %}
+          </section>
+        {% endif %}
+
+        <section>
+          <h2>My events</h2>
+          {% if registrations %}
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+              {% for reg in registrations %}
+                <a href="{% url 'events:event_detail' reg.event.pk %}" class="card block no-underline">
+                  <span class="block text-lg font-semibold text-court">{{ reg.event.title }}</span>
+                  <span class="mt-1 block text-sm">{{ reg.event.level }} · {{ reg.event.division }}</span>
+                  <span class="block text-sm">{{ reg.event.start_date|date:"D, M j" }}{% if reg.event.is_multi_week %} · {{ reg.event.weeks }} weeks{% endif %}</span>
+                </a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="card mt-3">You haven't joined any events yet. Got a code? Enter it in the box.</p>
+          {% endif %}
+        </section>
+      </div>
+
+      <aside>
+        {% include "core/_code_box.html" %}
+      </aside>
+    </div>
+  {% else %}
+    <div class="grid items-center gap-10 py-6 lg:grid-cols-2">
+      <div>
+        <h1 class="text-4xl max-lg:text-3xl">Welcome!</h1>
+        <p class="mt-3 text-lg">Got a code from the organizer? Enter it to join an event or follow the scores.</p>
+        <p class="mt-6"><a href="{% url 'accounts:login' %}" class="link">Sign in</a> or <a href="{% url 'accounts:signup' %}" class="link">create an account</a></p>
+        <p class="mt-2 text-sm">Did the organizer give you a claim code? <a href="{% url 'accounts:claim_start' %}" class="link">Claim your profile</a></p>
+      </div>
+      {% include "core/_code_box.html" %}
+    </div>
+  {% endif %}
 {% endblock %}

@@ -25,7 +25,9 @@ Tip for Joe. Rename this file to `CLAUDE.md` in your project root and Claude Cod
 ## 1. Purpose
 Run pickleball events like a standard tournament. Everyone plays in a round robin. Then the top teams advance to an elimination bracket. Players register themselves, join events with a code, see their schedule, and enter their own scores. Admins control formats, courts, and brackets. Spectators view results with a separate code.
 
-The current tool is Swish. Match its simple round viewer, where a user swipes sideways to move between rounds.
+The current tool is Swish. Match its simple round viewer, where a user moves sideways from round to round. In this app that is clickable round tabs and arrow buttons, with swiping as an extra on touch screens (see section 10).
+
+This is a website used mainly in a desktop web browser, not a phone app. See section 14.
 
 ---
 
@@ -238,7 +240,10 @@ Scramble standings are per player.
 - In-app notices about schedule changes.
 
 ### Round viewer (match Swish)
-- A "Round robin" view with a swipeable strip of rounds. Swiping sideways moves between rounds.
+- A "Round robin" view with a row of clickable round tabs (Round 1, Round 2, and so on) and previous and next arrow buttons. Clicking a tab or an arrow moves between rounds.
+- The left and right arrow keys also move between rounds.
+- Swiping sideways is an extra on touch screens. It must never be the only way to change rounds.
+- On narrow screens the tab row scrolls sideways and keeps the current round in view.
 - Each round lists its matches with court, time, sides, and score.
 - The round robin must be visual and easy to read at the end of the event.
 
@@ -294,10 +299,13 @@ Later phase, natural language creation.
 ---
 
 ## 14. Design (DECIDED that it matters)
-- Mobile first. Most players will use phones at the courts.
+- Desktop browser first. This is a website used mainly in a desktop web browser, not a phone app. Design the desktop layout first.
+- Responsive. Pages must still work well in tablet and phone browsers. Layouts collapse to one column on narrow screens.
+- Use the width on desktop. Put related panels side by side, such as settings next to codes, or a list next to its form. Keep text lines a readable length.
 - Simple enough for a first-time user to understand without help.
 - ASSUMED palette. Deep court green `#0F5C4D`, bright pickleball yellow-green `#C6E800`, clean white, warm gray text. Keep colors in CSS variables so they are easy to change.
-- Large tap targets. Clear court numbers and times.
+- Clear court numbers and times. Controls are easy to click with a mouse and still large enough to tap on a touch screen.
+- Everything works with a mouse and keyboard. Hover and focus states are visible.
 - Leave a place for a logo. Mrs. Carter may supply one later.
 
 ---
@@ -306,7 +314,7 @@ Later phase, natural language creation.
 - Python 3.12 or newer and the current Django LTS release. Verify the version at install time.
 - Django's built-in auth with a custom user model. No django-allauth, since there is no email login.
 - Server-rendered Django templates with HTMX. No separate JavaScript frontend.
-- Tailwind CSS. Mobile first.
+- Tailwind CSS. Desktop first in design, responsive for tablet and phone.
 - PostgreSQL in production. SQLite is fine locally. Read `DATABASE_URL` from the environment.
 - `qrcode` library for QR images.
 - pytest and pytest-django.
@@ -349,7 +357,7 @@ Use as a starting point. Names can change, relationships should stay.
 Finish and test each phase before starting the next. Commit after each phase.
 
 ### Phase 0. Setup
-Create the Django project and apps `accounts`, `events`, `scheduling`, `scoring`, `standings`, `brackets`, `chat`, and `core`. Configure environment variables, PostgreSQL via `DATABASE_URL` with SQLite fallback, America/Chicago, whitenoise, Tailwind, pytest, `.env.example`, `.gitignore`, and a README. Add a mobile first base template. Build no features yet.
+Create the Django project and apps `accounts`, `events`, `scheduling`, `scoring`, `standings`, `brackets`, `chat`, and `core`. Configure environment variables, PostgreSQL via `DATABASE_URL` with SQLite fallback, America/Chicago, whitenoise, Tailwind, pytest, `.env.example`, `.gitignore`, and a README. Add a desktop first, responsive base template. Build no features yet.
 Done when the server runs, `pytest` passes, and `python manage.py check` is clean.
 
 ### Phase 1. Accounts, events, codes
@@ -369,7 +377,7 @@ Sections 8 and 9. Two ranking screens, tie flagging for the admin, advancing cou
 Section 9. Winners and losers brackets, grand final reset, third place from the losers bracket final. Tests for several team counts including byes.
 
 ### Phase 6. Player, spectator, and round viewer screens
-Section 10. Player dashboard, swipeable round viewer, ranking screens, spectator view with the confirmed-round rule and first name plus last initial, and in-app notices.
+Section 10. Player dashboard, round viewer with clickable round tabs and arrow buttons (swipe as an extra on touch screens), ranking screens, spectator view with the confirmed-round rule and first name plus last initial, and in-app notices.
 
 ### Phase 7. Chat
 Section 11. HTMX polling, admin delete, report button, registered players and admins only.

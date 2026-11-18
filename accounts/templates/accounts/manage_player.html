@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ player.full_name }} · Manage{% endblock %}
+{% block content %}
+  <p><a href="{% url 'accounts:manage_players' %}" class="link">← Players</a></p>
+  <h1 class="mt-2">{{ player.full_name }}</h1>
+  <p class="mt-1">{{ player.get_gender_display|default:"Gender not set" }}{% if player.user %} · @{{ player.user.username }}{% endif %}</p>
+
+  <div class="mt-6 grid items-start gap-6 lg:grid-cols-2">
+    <div class="space-y-6">
+      {% if claim_url %}
+        <section class="card">
+          <h2>Claim code</h2>
+          <p class="help">Give this to {{ player.first_name }}. They use it to make a username and password.</p>
+          <p class="code mt-3">{{ player.claim_code }}</p>
+          <p class="mt-2 break-all text-sm">{{ claim_url }}</p>
+        </section>
+      {% endif %}
+
+      <section class="card">
+        <h2>Events</h2>
+        <ul class="mt-2 space-y-2">
+          {% for reg in registrations %}
+            <li><a href="{% url 'events:manage_event' reg.event.pk %}" class="link">{{ reg.event.title }}</a> <span class="text-sm">{{ reg.event.start_date|date:"M j, Y" }}</span></li>
+          {% empty %}
+            <li>Not in any events.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
+
+    <div class="space-y-6">
+      {% if password_form %}
+        <section class="card">
+          <h2>Reset password</h2>
+          <p class="help">Type a new password, then tell {{ player.first_name }} what it is.</p>
+          <form method="post" class="mt-4 space-y-4">
+            {% csrf_token %}
+            {% include "includes/form_fields.html" with form=password_form %}
+            <button type="submit" class="btn-primary">Set new password</button>
+          </form>
+        </section>
+      {% endif %}
+
+      {% if merge_form.fields.duplicate.queryset.exists %}
+        <section class="card">
+          <h2>Merge a duplicate into this profile</h2>
+          <p class="help">Use this when the same person has two profiles, like one you added and one they made. Their events and team move here, and the duplicate is deleted.{% if player.user %} Profiles with their own login aren't listed, because two logins can't be merged.{% endif %}</p>
+          <form method="post" class="mt-4 space-y-4" onsubmit="return confirm('Merge the duplicate into {{ player.full_name|escapejs }}? This can\'t be undone.')">
+            {% csrf_token %}
+            <input type="hidden" name="merge" value="1">
+            {% include "includes/form_fields.html" with form=merge_form %}
+            <button type="submit" class="btn-primary">Merge</button>
+          </form>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

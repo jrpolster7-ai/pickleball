@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Join {{ event.title }} · Pickleball{% endblock %}
+{% block content %}
+  <div class="page-narrow card">
+    <h1>{{ event.title }}</h1>
+    <p class="mt-1">{{ event.level }} · {{ event.division }}</p>
+    <p class="text-sm">{{ event.location }}</p>
+    <p class="text-sm">{{ event.start_date|date:"D, M j, Y" }}{% if event.is_multi_week %} · {{ event.weeks }} weeks on {{ event.get_weekly_day_display }}s{% endif %} · {{ event.start_time|time:"g:i A" }}</p>
+
+    {% if match.kind == "team" %}
+      <p class="mt-6 rounded-lg bg-mist px-4 py-3">You're joining <strong>{{ match.side.name }}</strong>'s team.</p>
+    {% endif %}
+
+    {% if problem %}
+      <p class="mt-6 rounded-lg bg-red-50 px-4 py-3 font-semibold text-alert">{{ problem }}</p>
+      <p class="mt-4"><a href="{% url 'core:home' %}" class="link">Back home</a></p>
+    {% else %}
+      <form method="post" class="mt-6">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary">{% if match.kind == "team" %}Join this team{% else %}Join this event{% endif %}</button>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

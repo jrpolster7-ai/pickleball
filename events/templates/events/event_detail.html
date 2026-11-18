@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} · Pickleball{% endblock %}
+{% block content %}
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1>{{ event.title }}</h1>
+      <p class="mt-1">{{ event.level }} · {{ event.division }} · {{ event.location }}</p>
+      <p class="text-sm">{{ event.start_date|date:"D, M j, Y" }}{% if event.is_multi_week %} · {{ event.weeks }} weeks on {{ event.get_weekly_day_display }}s{% endif %} · {{ event.start_time|time:"g:i A" }}</p>
+    </div>
+    {% if user.is_staff %}
+      <a href="{% url 'events:manage_event' event.pk %}" class="btn-secondary btn-small">Manage this event</a>
+    {% endif %}
+  </div>
+
+  {% if registered %}
+    <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+      <section class="card lg:col-span-2">
+        <h2>Your schedule</h2>
+        <p class="mt-2">You're signed up! 🎉 Your matches will show here once the organizer sets up the schedule.</p>
+      </section>
+
+      {% if not event.is_scramble %}
+        <aside class="space-y-4">
+          {% for invite in invites %}
+            <div class="card">
+              <p><strong>{{ invite.invited_by.full_name }}</strong> wants you as their partner.</p>
+              <div class="mt-3 flex gap-2">
+                <form method="post" action="{% url 'events:invite_action' invite.pk 'accept' %}" class="max-sm:flex-1">{% csrf_token %}<button class="btn-primary">Accept</button></form>
+                <form method="post" action="{% url 'events:invite_action' invite.pk 'decline' %}" class="max-sm:flex-1">{% csrf_token %}<button class="btn-secondary">No thanks</button></form>
+              </div>
+            </div>
+          {% endfor %}
+
+          <section class="card">
+            <h2>Your team</h2>
+            {% if side %}
+              <p class="mt-2 text-lg font-semibold">{{ side.name }}</p>
+              {% if side.players.all|length < event.players_per_side %}
+                <p class="mt-4">Share your team code with your partner:</p>
+                <p class="code mt-1">{{ side.team_code }}</p>
+                <p class="help">They enter it in the code box. Or invite them by username:</p>
+                <form method="post" action="{% url 'events:team_action' event.pk 'invite' %}" class="mt-3 space-y-3">
+                  {% csrf_token %}
+                  {% include "includes/field.html" with field=invite_form.username %}
+                  <button class="btn-primary">Send invite</button>
+                </form>
+                {% if sent_invites %}
+                  <p class="help mt-3">Waiting on: {% for inv in sent_invites %}{{ inv.player.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                {% endif %}
+              {% endif %}
+              <form method="post" action="{% url 'events:team_action' event.pk 'leave' %}" class="mt-4" onsubmit="return confirm('Leave this team?')">
+                {% csrf_token %}<button class="btn-danger btn-small">Leave team</button>
+              </form>
+            {% else %}
+              <p class="mt-2">You need a partner. Start a team, or join your partner's team with their code.</p>
+              <form method="post" action="{% url 'events:team_action' event.pk 'create' %}" class="mt-4">
+                {% csrf_token %}<button class="btn-primary">Start a team</button>
+              </form>
+              <form method="post" action="{% url 'events:team_action' event.pk 'code' %}" class="mt-4 space-y-3 border-t border-line pt-4">
+                {% csrf_token %}
+                {% include "includes/field.html" with field=code_form.code %}
+                <button class="btn-secondary">Join with team code</button>
+              </form>
+            {% endif %}
+          </section>
+        </aside>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}
