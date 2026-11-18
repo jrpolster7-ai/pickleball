@@ -1,0 +1,27 @@
+/* source(none): only scan the folders listed below, never pvenv or bin. */
+@import "tailwindcss" source(none);
+
+/* Tell Tailwind where to look for class names. */
+@source "../templates";
+@source "../*/templates";
+
+/*
+  Brand colors (ASSUMED palette, CLAUDE.md section 14).
+  Change them here and rebuild. Utilities like bg-court and text-ball come from these.
+*/
+@theme {
+  --color-court: #0F5C4D;   /* deep court green */
+  --color-ball: #C6E800;    /* pickleball yellow-green */
+  --color-ink: #44403C;     /* warm gray text */
+  --color-mist: #F5F5F4;    /* light warm gray background */
+}
+
+@layer components {
+  /* Large tap target: at least 48px tall, full width on phones. */
+  .btn-primary {
+    @apply inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-ball px-6 text-lg font-semibold text-court sm:w-auto;
+  }
+  .btn-primary:focus-visible {
+    @apply outline-4 outline-offset-2 outline-court;
+  }
+}

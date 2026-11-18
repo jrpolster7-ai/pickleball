@@ -1,0 +1,35 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0F5C4D">
+  <title>{% block title %}Pickleball{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/htmx.min.js' %}" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-white text-ink antialiased" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <header class="bg-court text-white">
+    <div class="mx-auto flex max-w-screen-md items-center gap-3 px-4 py-3">
+      <a href="{% url 'core:home' %}" class="flex items-center gap-3 min-h-12">
+        {# Logo slot. Swap this span for an <img> when Mrs. Carter supplies a logo. #}
+        <span class="logo-slot grid h-10 w-10 place-items-center rounded-full bg-ball font-bold text-court" aria-hidden="true">P</span>
+        <span class="text-lg font-semibold">{% block site_name %}Pickleball{% endblock %}</span>
+      </a>
+    </div>
+  </header>
+
+  {% if messages %}
+    <div class="mx-auto max-w-screen-md px-4 pt-4 space-y-2">
+      {% for message in messages %}
+        <p class="rounded-lg bg-mist px-4 py-3">{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main class="mx-auto max-w-screen-md px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
