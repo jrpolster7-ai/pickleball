@@ -295,6 +295,8 @@ class Side(models.Model):
     # Blank for unscheduled teams and for Scramble's per-round sides.
     slot = models.PositiveSmallIntegerField(null=True, blank=True)
     pool = models.PositiveSmallIntegerField(null=True, blank=True)
+    # The admin's order inside a seeding tie (section 8). Lower goes first.
+    tiebreak = models.PositiveSmallIntegerField(null=True, blank=True)
     created_by = models.ForeignKey(
         "accounts.Player", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )

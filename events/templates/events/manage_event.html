@@ -17,6 +17,7 @@
     <div class="flex flex-wrap gap-2 max-sm:w-full">
       <a href="{% url 'events:event_edit' event.pk %}" class="btn-secondary">Edit settings</a>
       <a href="{% url 'scheduling:schedule' event.pk %}" class="{% if event.has_schedule %}btn-secondary{% else %}btn-primary{% endif %}">{% if event.has_schedule %}Schedule{% else %}Make the schedule{% endif %}</a>
+      {% if event.schedule_locked %}<a href="{% url 'standings:standings' event.pk %}" class="btn-secondary">Standings</a>{% if not event.is_scramble %}<a href="{% url 'brackets:bracket' event.pk %}" class="{% if event.status == 'ROUND_ROBIN' %}btn-primary{% else %}btn-secondary{% endif %}">Bracket</a>{% endif %}{% endif %}
       {% if event.status == "DRAFT" %}
         <form method="post" action="{% url 'events:set_status' event.pk %}" class="max-sm:w-full">{% csrf_token %}<input type="hidden" name="status" value="OPEN"><button class="btn-primary">Open sign-ups</button></form>
       {% elif event.status == "OPEN" %}

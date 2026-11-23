@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Bracket · {{ event.title }}{% endblock %}
+{% block content %}
+  <p><a href="{% url 'events:manage_event' event.pk %}" class="link">← {{ event.title }}</a></p>
+  <div class="mt-2 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <div class="flex flex-wrap items-center gap-3"><h1>Bracket</h1><span class="chip">{{ event.get_status_display }}</span></div>
+      <p class="mt-1">{{ event.get_bracket_type_display }} · {{ event.get_bracket_sizing_display }}{% if event.third_place_match %} · third place match{% endif %}</p>
+    </div>
+    <a href="{% url 'standings:standings' event.pk %}" class="btn-secondary">Standings</a>
+  </div>
+
+  {% if scramble %}
+    <div class="card mt-6 max-w-2xl"><p>Scramble events don't have a bracket. The top player in the <a class="link" href="{% url 'standings:standings' event.pk %}">standings</a> wins.</p></div>
+
+  {% elif rounds %}
+    {% if champion %}
+      <div class="mt-6 rounded-xl border-2 border-ball-dark bg-ball/30 px-5 py-4">
+        <p class="text-sm font-semibold uppercase tracking-wide text-court">Champions 🏆</p>
+        <p class="text-2xl font-bold text-court">{{ champion.name }}</p>
+      </div>
+    {% endif %}
+    <div class="mt-6">{% include "brackets/_bracket.html" with live=True %}</div>
+    <p class="help">Click a match to enter or fix its score. Winners move on by themselves.</p>
+    {% if can_delete %}
+      <form method="post" action="{% url 'brackets:delete' event.pk %}" class="mt-6" onsubmit="return confirm('Remove the bracket? You can build a new one.')">
+        {% csrf_token %}<button class="btn-danger btn-small">Remove bracket</button>
+      </form>
+    {% endif %}
+
+  {% else %}
+    <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+      <div class="space-y-6 lg:col-span-2">
+        {% for group, unresolved, matters in ties %}
+          {% if unresolved %}
+            <section class="card {% if matters %}border-red-200 bg-red-50{% endif %}">
+              <h2 {% if matters %}class="text-alert"{% endif %}>Tie to decide</h2>
+              <p class="help">These teams are even on wins, losses, total points, and point difference. You decide the order.{% if not matters %} It doesn't affect who advances.{% endif %}</p>
+              <form method="post" action="{% url 'brackets:tiebreak' event.pk %}" class="mt-3 space-y-2">
+                {% csrf_token %}<input type="hidden" name="count" value="{{ count }}">
+                {% for row in group %}
+                  <div class="flex items-center gap-3">
+                    <select name="order_{{ row.key }}" class="w-28" aria-label="Place for {{ row.extra.label }}">
+                      {% for _ in group %}<option value="{{ forloop.counter }}" {% if forloop.counter == forloop.parentloop.counter %}selected{% endif %}>Place {{ forloop.counter }}</option>{% endfor %}
+                    </select>
+                    <span class="font-semibold">{{ row.extra.label }}</span>
+                    <span class="text-sm text-stone-500">{{ row.wins }}–{{ row.losses }}, {{ row.points_for }} pts</span>
+                  </div>
+                {% endfor %}
+                <button class="btn-primary btn-small">Save this order</button>
+              </form>
+            </section>
+          {% endif %}
+        {% endfor %}
+
+        <section class="card">
+          <h2>Seeds</h2>
+          <p class="help">Wins, then losses, then total points, then point difference. Ties are decided by you.</p>
+          <table class="table mt-3">
+            <thead><tr><th class="w-16">Seed</th><th>Team</th><th class="text-right">W</th><th class="text-right">L</th><th class="text-right">Points</th><th class="text-right max-sm:hidden">+/−</th></tr></thead>
+            <tbody>
+              {% for row in seeding.order %}
+                <tr class="{% if forloop.counter == count %}border-b-4 border-b-court{% endif %} {% if forloop.counter > count %}text-stone-500{% endif %}">
+                  <td class="font-bold">{{ row.rank }}</td>
+                  <td>{{ row.extra.label }}{% if row.extra.pool %} <span class="chip max-sm:hidden">{{ row.extra.pool }}</span>{% endif %}{% for group, unresolved, matters in ties %}{% if unresolved and row in group %} <span class="chip bg-red-100 text-alert">Tied</span>{% endif %}{% endfor %}</td>
+                  <td class="text-right">{{ row.wins }}</td>
+                  <td class="text-right">{{ row.losses }}</td>
+                  <td class="text-right">{{ row.points_for }}</td>
+                  <td class="text-right max-sm:hidden">{% if row.diff > 0 %}+{% endif %}{{ row.diff }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p class="help">The green line is the cut. Teams below it don't advance.</p>
+        </section>
+
+        {% if preview %}
+          <section class="card">
+            <h2>Preview: {{ count }} teams</h2>
+            <p class="help">
+              {% if event.bracket_sizing == "PLAY_IN" %}When the number of teams isn't 2, 4, 8, 16, and so on, the teams closest to the cut play in for the last spots: the last team in plays the first team out.
+              {% else %}When the number of teams isn't 2, 4, 8, 16, and so on, the top seeds get a bye and skip round 1.{% endif %}
+            </p>
+            <div class="mt-4">{% include "brackets/_bracket.html" with rounds=preview live=False %}</div>
+          </section>
+        {% endif %}
+      </div>
+
+      <aside class="space-y-6 lg:sticky lg:top-4">
+        <section class="card">
+          <h2>Build the bracket</h2>
+          <form method="get" class="mt-3 space-y-3">
+            {% include "includes/field.html" with field=form.count %}
+            <button class="btn-secondary btn-small">Preview</button>
+          </form>
+          <form method="post" action="{% url 'brackets:build' event.pk %}" class="mt-5 space-y-4 border-t border-line pt-4">
+            {% csrf_token %}
+            <input type="hidden" name="count" value="{{ count }}">
+            {% include "includes/field.html" with field=form.date %}
+            {% include "includes/field.html" with field=form.start_time %}
+            {% if problem %}
+              <p class="rounded-lg bg-mist px-3 py-2 text-sm font-semibold">{{ problem }}</p>
+              <button class="btn-primary" disabled aria-disabled="true">Build bracket with {{ count }} teams</button>
+            {% else %}
+              <button class="btn-primary">Build bracket with {{ count }} teams</button>
+            {% endif %}
+          </form>
+          <p class="help">Change the bracket style in <a href="{% url 'events:event_edit' event.pk %}" class="link">event settings</a>.</p>
+        </section>
+      </aside>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -24,7 +24,7 @@
                 <tr>
                   <td><span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-court font-bold text-white">{{ match.court }}</span></td>
                   <td class="whitespace-nowrap"><span class="font-semibold">{{ match.start_time|time:"g:i A" }}</span><span class="block text-sm">Round {{ match.round.number }}{% if event.is_multi_week %} · {{ match.start_time|date:"M j" }}{% endif %}</span></td>
-                  <td>{{ opponents.name }}</td>
+                  <td>{% if opponents %}{{ opponents.name }}{% else %}To be decided{% endif %}{% if match.bracket_label %} <span class="chip">{{ match }}</span>{% endif %}</td>
                   <td class="text-sm">{{ state.label }}</td>
                   <td class="text-right">
                     {% if state.action == "confirm" %}<a href="{% url 'scoring:match_score' match.pk %}" class="btn-primary btn-small">Confirm</a>

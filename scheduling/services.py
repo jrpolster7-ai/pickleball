@@ -374,7 +374,7 @@ def saved_rounds(event: Event):
 def saved_counts(event: Event) -> list[CountRow]:
     """Matches per team (or games per player for Scramble) in the saved schedule, all weeks."""
     weeks = max(event.sessions.count(), 1)
-    rounds = event.rounds.count()
+    rounds = event.rounds.filter(matches__stage=Match.Stage.ROUND_ROBIN).distinct().count()
     if event.is_scramble:
         Through = Side.players.through
         played = {p.pk: 0 for p in _scramble_players(event)}
@@ -387,7 +387,7 @@ def saved_counts(event: Event) -> list[CountRow]:
                 for pk, c in sorted(played.items(), key=lambda kv: names[kv[0]])]
     sides = list(event.sides.filter(slot__isnull=False).prefetch_related("players").order_by("slot"))
     played = {s.pk: 0 for s in sides}
-    for a, b in event.matches.values_list("side_a_id", "side_b_id"):
+    for a, b in event.matches.filter(stage=Match.Stage.ROUND_ROBIN).values_list("side_a_id", "side_b_id"):
         played[a] = played.get(a, 0) + 1
         played[b] = played.get(b, 0) + 1
     return [CountRow(label=s.name, per_week=played[s.pk] // weeks, sit_outs=(rounds - played[s.pk]) // weeks,

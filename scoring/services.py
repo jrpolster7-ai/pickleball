@@ -29,9 +29,9 @@ class ScoreError(Exception):
 def player_side(match: Match, player) -> str | None:
     """'A' or 'B' if this player is in the match."""
     # .all() uses prefetched players when the caller loaded them.
-    if any(p.pk == player.pk for p in match.side_a.players.all()):
+    if match.side_a_id and any(p.pk == player.pk for p in match.side_a.players.all()):
         return rules.A
-    if any(p.pk == player.pk for p in match.side_b.players.all()):
+    if match.side_b_id and any(p.pk == player.pk for p in match.side_b.players.all()):
         return rules.B
     return None
 
@@ -51,6 +51,8 @@ def is_locked(match: Match, now: datetime.datetime | None = None) -> bool:
 def _play_problem(match: Match) -> str | None:
     if not match.event.schedule_locked:
         return "Scores open once the organizer starts play."
+    if not match.is_ready:
+        return "This match is waiting for its teams. Earlier bracket matches decide who plays."
     return None
 
 
@@ -95,6 +97,18 @@ def _finalize(match: Match, games, *, forfeit: bool = False) -> None:
     match.winner = rules.match_winner(games)
     match.forfeit = forfeit
     match.save(update_fields=["status", "winner", "forfeit"])
+    _bracket_hook("after_result", match)
+
+
+def _bracket_hook(name: str, match: Match) -> None:
+    """Bracket matches send their winner on. A blocked move undoes the whole change."""
+    from brackets import services as brackets
+    from brackets.brackets import BracketError
+
+    try:
+        getattr(brackets, name)(match)
+    except BracketError as exc:
+        raise ScoreError(str(exc)) from exc
 
 
 def _close_open_submissions(match: Match, status=Status.RESOLVED) -> None:
@@ -193,6 +207,7 @@ def admin_clear_score(match: Match, actor) -> None:
     match.forfeit = False
     match.save(update_fields=["status", "winner", "forfeit"])
     _close_open_submissions(match)
+    _bracket_hook("after_clear", match)
     audit.log(actor, "score cleared", match, old=old, new="no score", event=match.event)
 
 
@@ -220,7 +235,9 @@ def withdraw(side, actor) -> int:
     """A team withdraws. Every match they haven't finished becomes a forfeit loss."""
     if not side.event.schedule_locked:
         raise ScoreError("Play hasn't started. Remove or split up the team instead.")
-    matches = Match.objects.filter(Q(side_a=side) | Q(side_b=side)).exclude(status=Match.Status.CONFIRMED)
+    matches = (Match.objects.filter(Q(side_a=side) | Q(side_b=side))
+               .filter(side_a__isnull=False, side_b__isnull=False)  # bracket matches still waiting are skipped
+               .exclude(status=Match.Status.CONFIRMED))
     count = 0
     for match in matches.select_related("event", "side_a", "side_b"):
         forfeit(match, match.side_letter(side), actor)

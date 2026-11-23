@@ -219,7 +219,7 @@ Scramble standings are per player.
 - When the advancing count is not a power of 2, the admin chooses per event between two methods (DECIDED).
   - **Top seed byes.** The highest seeds skip round one.
   - **Play-in matches.** The lowest seeds play extra matches for the final spot or spots.
-- OPEN. Exact play-in structure. Build the simplest version, where the lowest seeds play each other to fill the remaining slots, and show Joe the result before moving on.
+- DECIDED. Play-in structure. The main bracket is the largest power of 2 that fits. The teams closest to the cut play in for the last spots: the last team in plays the first team out (8 vs 9), then work outward (7 vs 10, and so on). The winner takes the higher seed's spot. Example, 10 teams advance: 8 vs 9 and 7 vs 10 play in, then an 8-team bracket. With standard seeding these are the same matches as top seed byes. Only the round names differ ("Play-in" or "Round 1").
 - A third-place match is a per-event admin choice, on or off (DECIDED). ASSUMED default is on.
   - ASSUMED. In single elimination with the toggle on, the two semifinal losers play for third.
   - ASSUMED. In double elimination, third place is the loser of the losers bracket final. No separate match, so the toggle has no effect there.
@@ -392,7 +392,7 @@ Section 12. Anthropic API with a confirm-before-create preview. API key in an en
 
 ## 18. Open items for Joe
 1. Hosting. Pick a host before launch.
-2. Play-in match structure for non power of 2 brackets.
+2. ~~Play-in match structure for non power of 2 brackets.~~ Decided in Phase 4, see section 9.
 3. Forfeit scoring in standings. Default is an 11 to 0 win per game, configurable.
 4. Confirm with Mrs. Carter that spectators seeing scores after each confirmed round is close enough to "not live."
 5. Confirm with Mrs. Carter that no password reset by email is acceptable. Admins reset passwords by hand.

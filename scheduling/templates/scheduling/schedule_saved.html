@@ -16,7 +16,7 @@
             {% for rnd in session.rounds.all %}
               <section class="card scroll-mt-4" id="round-{{ rnd.pk }}">
                 <div class="flex flex-wrap items-end justify-between gap-3">
-                  <h3 class="text-lg font-bold text-court">Round {{ rnd.number }}</h3>
+                  <h3 class="text-lg font-bold text-court">Round {{ rnd.number }}{% if rnd.label %} · {{ rnd.label }}{% endif %}</h3>
                   <form method="post" action="{% url 'scheduling:round_time' event.pk rnd.pk %}" class="flex items-end gap-2">
                     {% csrf_token %}
                     <label for="{{ rnd.time_form.start_time.id_for_label }}" class="text-sm font-semibold">Round starts</label>
@@ -30,9 +30,9 @@
                     {% for match in rnd.matches.all %}
                       <tr>
                         <td><span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-court font-bold text-white">{{ match.court }}</span></td>
-                        <td>{{ match.side_a.name }}{% if match.pool %} <span class="chip max-sm:hidden">{{ match.pool_label }}</span>{% endif %}</td>
+                        <td>{{ match.label_a }}{% if match.pool %} <span class="chip max-sm:hidden">{{ match.pool_label }}</span>{% endif %}</td>
                         <td class="text-sm text-stone-500">vs</td>
-                        <td>{{ match.side_b.name }}</td>
+                        <td>{{ match.label_b }}</td>
                         <td class="max-sm:hidden {% if match.start_time != rnd.start_time %}font-semibold text-court{% endif %}">{{ match.start_time|time:"g:i A" }}</td>
                         <td>
                           <a href="{% url 'scoring:admin_match' event.pk match.pk %}" class="link whitespace-nowrap">
@@ -71,7 +71,7 @@
           <p class="help">The two sides entered different scores.</p>
           <ul class="mt-3 space-y-2">
             {% for m in disputed %}
-              <li><a href="{% url 'scoring:admin_match' event.pk m.pk %}" class="link">Round {{ m.round.number }}, court {{ m.court }}: {{ m.side_a.name }} vs {{ m.side_b.name }}</a></li>
+              <li><a href="{% url 'scoring:admin_match' event.pk m.pk %}" class="link">Round {{ m.round.number }}, court {{ m.court }}: {{ m.label_a }} vs {{ m.label_b }}</a></li>
             {% endfor %}
           </ul>
         </section>
@@ -101,6 +101,7 @@
             <p class="help">Clear it to change teams, courts, or match counts, then publish again.</p>
           {% endif %}
           <p><a href="{% url 'scoring:audit_log' event.pk %}" class="link">Change log</a></p>
+          {% if event.schedule_locked %}<p><a href="{% url 'standings:standings' event.pk %}" class="link">Standings</a>{% if not event.is_scramble %} · <a href="{% url 'brackets:bracket' event.pk %}" class="link">Bracket</a>{% endif %}</p>{% endif %}
         </div>
       </section>
 

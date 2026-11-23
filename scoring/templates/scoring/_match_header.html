@@ -2,10 +2,10 @@
 <div class="flex flex-wrap items-center gap-3">
   <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-court text-xl font-bold text-white" title="Court">{{ match.court }}</span>
   <div>
-    <p class="text-sm font-semibold uppercase tracking-wide text-stone-500">Court {{ match.court }} · Round {{ match.round.number }}{% if event.is_multi_week %} · Week {{ match.round.session.week }}{% endif %}</p>
+    <p class="text-sm font-semibold uppercase tracking-wide text-stone-500">Court {{ match.court }} · {% if match.bracket_label %}{{ match }}{% else %}Round {{ match.round.number }}{% endif %}{% if event.is_multi_week %} · Week {{ match.round.session.week }}{% endif %}</p>
     <p class="font-semibold">{{ match.start_time|date:"D, M j" }} at {{ match.start_time|time:"g:i A" }}</p>
   </div>
   <span class="chip">{{ match.get_status_display }}{% if match.forfeit %} · forfeit{% endif %}</span>
 </div>
-<p class="mt-4 text-2xl font-bold text-court max-sm:text-xl">{{ match.side_a.name }} <span class="text-base font-normal text-stone-500">vs</span> {{ match.side_b.name }}</p>
+<p class="mt-4 text-2xl font-bold text-court max-sm:text-xl">{{ match.label_a }} <span class="text-base font-normal text-stone-500">vs</span> {{ match.label_b }}</p>
 {% if match.score %}<p class="mt-1 text-lg">Score: <strong>{{ match.score }}</strong></p>{% endif %}

@@ -1,0 +1,29 @@
+{# One ranking table. Takes rows, who, view, show_pool. #}
+<table class="table">
+  <thead>
+    <tr>
+      <th class="w-16">Rank</th>
+      <th>{{ who }}</th>
+      <th class="text-right max-sm:hidden">Played</th>
+      <th class="text-right {% if view == 'wins' %}text-court{% endif %}">W</th>
+      <th class="text-right">L</th>
+      <th class="text-right {% if view == 'points' %}text-court{% endif %}">Points</th>
+      <th class="text-right max-sm:hidden">+/−</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        <td class="font-bold">{% if row.tied %}T{% endif %}{{ row.rank }}</td>
+        <td>{{ row.extra.label }}{% if show_pool and row.extra.pool %} <span class="chip max-sm:hidden">{{ row.extra.pool }}</span>{% endif %}</td>
+        <td class="text-right max-sm:hidden">{{ row.played }}</td>
+        <td class="text-right {% if view == 'wins' %}font-bold{% endif %}">{{ row.wins }}</td>
+        <td class="text-right">{{ row.losses }}</td>
+        <td class="text-right {% if view == 'points' %}font-bold{% endif %}">{{ row.points_for }}</td>
+        <td class="text-right max-sm:hidden">{% if row.diff > 0 %}+{% endif %}{{ row.diff }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7">No one to rank yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

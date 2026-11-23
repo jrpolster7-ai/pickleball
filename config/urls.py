@@ -7,5 +7,7 @@ urlpatterns = [
     path("", include("events.urls")),
     path("", include("scheduling.urls")),
     path("", include("scoring.urls")),
+    path("", include("standings.urls")),
+    path("", include("brackets.urls")),
     path("", include("core.urls")),
 ]

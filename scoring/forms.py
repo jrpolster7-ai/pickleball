@@ -24,7 +24,7 @@ class ScoreForm(forms.Form):
                     min_value=0, max_value=99, required=False,
                     label=f"Game {number}, {'side A' if side == 'a' else 'side B'}",
                     widget=forms.NumberInput(attrs={**POINTS, "aria-label": f"Game {number} points for "
-                                                    f"{match.side_a.name if side == 'a' else match.side_b.name}"}),
+                                                    f"{match.label_a if side == 'a' else match.label_b}"}),
                 )
 
     def rows(self):
@@ -69,4 +69,4 @@ class ForfeitForm(forms.Form):
 
     def __init__(self, *args, match: Match, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["side"].choices = [("A", match.side_a.name), ("B", match.side_b.name)]
+        self.fields["side"].choices = [("A", match.label_a), ("B", match.label_b)]
