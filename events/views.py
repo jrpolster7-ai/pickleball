@@ -2,7 +2,7 @@ import qrcode
 import qrcode.image.svg
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Prefetch
+from django.db.models import Count, Prefetch, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -330,6 +330,7 @@ def event_detail(request, pk):
     return render(request, "events/event_detail.html", {
         "event": event,
         "player": player,
+        "my_matches": _my_matches(event, player),
         "side": side,
         "invites": invites,
         "sent_invites": sent,
@@ -337,6 +338,26 @@ def event_detail(request, pk):
         "code_form": CodeForm(),
         "registered": registration.is_registered(event, player),
     })
+
+
+def _my_matches(event, player):
+    """(match, what the player can do, the other side) for each of the player's matches."""
+    from scheduling.models import Match
+    from scoring.services import player_view
+
+    matches = (
+        Match.objects.filter(event=event)
+        .filter(Q(side_a__players=player) | Q(side_b__players=player))
+        .select_related("event__division", "round__session", "side_a", "side_b")
+        .prefetch_related("side_a__players", "side_b__players", "games", "submissions")
+        .order_by("start_time", "court")
+        .distinct()
+    )
+    rows = []
+    for match in matches:
+        state = player_view(match, player)
+        rows.append((match, state, match.side_b if state.side == "A" else match.side_a))
+    return rows
 
 
 @login_required

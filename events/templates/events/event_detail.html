@@ -15,8 +15,29 @@
   {% if registered %}
     <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
       <section class="card lg:col-span-2">
-        <h2>Your schedule</h2>
-        <p class="mt-2">You're signed up! 🎉 Your matches will show here once the organizer sets up the schedule.</p>
+        <h2>Your matches</h2>
+        {% if my_matches %}
+          <table class="table mt-3">
+            <thead><tr><th class="w-20">Court</th><th>When</th><th>Opponents</th><th>Score</th><th><span class="sr-only">Action</span></th></tr></thead>
+            <tbody>
+              {% for match, state, opponents in my_matches %}
+                <tr>
+                  <td><span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-court font-bold text-white">{{ match.court }}</span></td>
+                  <td class="whitespace-nowrap"><span class="font-semibold">{{ match.start_time|time:"g:i A" }}</span><span class="block text-sm">Round {{ match.round.number }}{% if event.is_multi_week %} · {{ match.start_time|date:"M j" }}{% endif %}</span></td>
+                  <td>{{ opponents.name }}</td>
+                  <td class="text-sm">{{ state.label }}</td>
+                  <td class="text-right">
+                    {% if state.action == "confirm" %}<a href="{% url 'scoring:match_score' match.pk %}" class="btn-primary btn-small">Confirm</a>
+                    {% elif state.action == "enter" %}<a href="{% url 'scoring:match_score' match.pk %}" class="btn-primary btn-small">Enter score</a>
+                    {% elif state.action == "change" %}<a href="{% url 'scoring:match_score' match.pk %}" class="btn-secondary btn-small">Change</a>{% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="mt-2">You're signed up! 🎉 Your matches will show here once the organizer sets up the schedule.</p>
+        {% endif %}
       </section>
 
       {% if not event.is_scramble %}

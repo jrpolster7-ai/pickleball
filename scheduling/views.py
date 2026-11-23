@@ -1,4 +1,4 @@
-﻿from django.contrib import messages
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -45,9 +45,12 @@ def schedule(request, pk):
                         auto_id=f"m{match.pk}_%s",
                     )
         counts = services.saved_counts(event)
+        disputed = [m for s in sessions for r in s.rounds.all() for m in r.matches.all()
+                    if m.status == Match.Status.DISPUTED]
         return render(request, "scheduling/schedule_saved.html", {
             "event": event,
             "sessions": sessions,
+            "disputed": disputed,
             "counts": counts,
             "multi_pool": any(c.pool for c in counts),
         })

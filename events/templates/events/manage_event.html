@@ -90,9 +90,15 @@
                   <td><span class="font-semibold">{{ side.name }}</span>{% if side.players.all|length < 2 %} <span class="chip">Needs a partner</span>{% endif %}</td>
                   <td class="font-mono max-sm:hidden">{{ side.team_code }}</td>
                   <td class="text-right">
-                    <form method="post" action="{% url 'events:admin_delete_team' event.pk side.pk %}" onsubmit="return confirm('Split up this team? Both players stay in the event.')">
-                      {% csrf_token %}<button class="btn-danger btn-small">Split up</button>
-                    </form>
+                    {% if event.schedule_locked and side.is_scheduled %}
+                      <form method="post" action="{% url 'scoring:withdraw_team' event.pk side.pk %}" onsubmit="return confirm('Withdraw this team? Every match they have left becomes a forfeit loss.')">
+                        {% csrf_token %}<button class="btn-danger btn-small">Withdraw</button>
+                      </form>
+                    {% else %}
+                      <form method="post" action="{% url 'events:admin_delete_team' event.pk side.pk %}" onsubmit="return confirm('Split up this team? Both players stay in the event.')">
+                        {% csrf_token %}<button class="btn-danger btn-small">Split up</button>
+                      </form>
+                    {% endif %}
                   </td>
                 </tr>
               {% empty %}

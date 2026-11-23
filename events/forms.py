@@ -1,4 +1,4 @@
-﻿from django import forms
+from django import forms
 
 from accounts.models import Player
 
@@ -21,7 +21,7 @@ class EventForm(forms.ModelForm):
         ("The basics", ["title", "level", "division", "location"]),
         ("When", ["start_date", "weeks", "end_date", "weekly_day", "start_time"]),
         ("Teams and matches", ["team_count", "matches_per_team", "total_matches", "scramble_rounds", "court_count", "pool_size"]),
-        ("Scoring", ["games_per_match", "points_to_win", "win_by_two", "point_cap", "players_enter_scores"]),
+        ("Scoring", ["games_per_match", "points_to_win", "win_by_two", "point_cap", "forfeit_points", "players_enter_scores"]),
         ("Timing", ["minutes_per_match", "break_minutes"]),
         ("Sign-ups", ["registration_mode", "max_participants"]),
         ("Bracket", ["bracket_type", "bracket_sizing", "third_place_match"]),
@@ -33,7 +33,7 @@ class EventForm(forms.ModelForm):
             "title", "level", "division", "location",
             "start_date", "weeks", "end_date", "weekly_day", "start_time",
             "team_count", "matches_per_team", "total_matches", "scramble_rounds", "court_count", "pool_size",
-            "games_per_match", "points_to_win", "win_by_two", "point_cap", "players_enter_scores",
+            "games_per_match", "points_to_win", "win_by_two", "point_cap", "forfeit_points", "players_enter_scores",
             "minutes_per_match", "break_minutes",
             "registration_mode", "max_participants",
             "bracket_type", "bracket_sizing", "third_place_match",
@@ -60,7 +60,7 @@ class EventForm(forms.ModelForm):
         self.fields["end_date"].required = False
         self.fields["weeks"].required = False
         for name in ["weeks", "team_count", "matches_per_team", "total_matches", "scramble_rounds", "court_count",
-                     "pool_size", "points_to_win", "point_cap", "minutes_per_match",
+                     "pool_size", "points_to_win", "point_cap", "forfeit_points", "minutes_per_match",
                      "break_minutes", "max_participants"]:
             self.fields[name].widget.attrs.update(NUMBER)
         self.fields["court_count"].widget.attrs.update(min=1, max=8)

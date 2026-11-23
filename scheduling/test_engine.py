@@ -1,4 +1,4 @@
-﻿"""Scheduling engine tests (section 6). These must never be wrong."""
+"""Scheduling engine tests (section 6). These must never be wrong."""
 
 import datetime
 import time

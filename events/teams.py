@@ -1,4 +1,4 @@
-﻿"""Doubles teams: create, invite by username or team code, admin-built teams (section 5)."""
+"""Doubles teams: create, invite by username or team code, admin-built teams (section 5)."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction

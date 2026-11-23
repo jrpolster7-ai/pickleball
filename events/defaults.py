@@ -1,4 +1,4 @@
-﻿"""Saved defaults, the "memory" feature (section 12)."""
+"""Saved defaults, the "memory" feature (section 12)."""
 
 import datetime
 
@@ -56,7 +56,7 @@ def quick_create(*, level, division, start_date: datetime.date, weeks: int, crea
     """Level, Division, start date, and weeks in. Everything else from defaults."""
     d = OrganizationDefaults.get_solo()
     event = Event(
-        title=f"{level.name} {division.name} Â· {start_date:%b} {start_date.day}",
+        title=f"{level.name} {division.name} · {start_date:%b} {start_date.day}",
         level=level,
         division=division,
         location=d.default_location,

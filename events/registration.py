@@ -1,4 +1,4 @@
-﻿"""Joining, removing, and moving players between events (section 5)."""
+"""Joining, removing, and moving players between events (section 5)."""
 
 from django.db import transaction
 

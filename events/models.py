@@ -90,6 +90,10 @@ class EventSettings(models.Model):
     point_cap = models.PositiveSmallIntegerField(
         null=True, blank=True, help_text="Optional. Leave blank for no cap."
     )
+    forfeit_points = models.PositiveSmallIntegerField(
+        "forfeit score", null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text="Points per game the winner gets for a forfeit. Leave blank to use the points to win (11 to 0).",
+    )
     minutes_per_match = models.PositiveSmallIntegerField(
         default=20, validators=[MinValueValidator(1)]
     )
@@ -125,6 +129,7 @@ SETTING_FIELDS = [
     "points_to_win",
     "win_by_two",
     "point_cap",
+    "forfeit_points",
     "minutes_per_match",
     "break_minutes",
     "start_time",

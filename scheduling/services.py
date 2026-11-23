@@ -366,7 +366,7 @@ def retime(event: Event, actor=None) -> None:
 def saved_rounds(event: Event):
     """Sessions with rounds and matches, ready to show. One query per level, no N+1."""
     side_players = ("side_a__players", "side_b__players")
-    matches = Match.objects.order_by("court").prefetch_related(*side_players)
+    matches = Match.objects.order_by("court").prefetch_related(*side_players, "games")
     rounds = Round.objects.order_by("number").prefetch_related(Prefetch("matches", queryset=matches))
     return event.sessions.prefetch_related(Prefetch("rounds", queryset=rounds))
 

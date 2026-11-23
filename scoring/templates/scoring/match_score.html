@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Score · {{ event.title }}{% endblock %}
+{% block content %}
+  <p><a href="{% url 'events:event_detail' event.pk %}" class="link">← {{ event.title }}</a></p>
+
+  <div class="mt-4 grid items-start gap-6 lg:grid-cols-3">
+    <section class="card lg:col-span-2">
+      {% include "scoring/_match_header.html" %}
+
+      <p class="mt-6 rounded-lg bg-mist px-4 py-3 font-semibold">{{ view.label }}</p>
+
+      {% if view.action == "confirm" %}
+        <div class="mt-4 flex flex-wrap gap-2">
+          <form method="post" class="max-sm:w-full">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="confirm">
+            <input type="hidden" name="submission" value="{{ view.waiting.pk }}">
+            <button class="btn-primary">Yes, that's right</button>
+          </form>
+          <a href="#fix" class="btn-secondary" onclick="document.getElementById('fix').open = true">No, that's wrong</a>
+        </div>
+        <details id="fix" class="mt-6 border-t border-line pt-4">
+          <summary class="link cursor-pointer">Enter the score you think is right</summary>
+          <p class="help mt-2">If your score doesn't match theirs, an organizer will be asked to decide.</p>
+          <div class="mt-4">
+            {% include "scoring/_score_form.html" with action="enter" button="Send my score" %}
+          </div>
+        </details>
+      {% elif form %}
+        <div class="mt-6">
+          {% include "scoring/_score_form.html" with action="enter" button="Save score" %}
+        </div>
+      {% endif %}
+    </section>
+
+    <aside class="card space-y-2 text-sm">
+      <h2>How scoring works</h2>
+      <p>Either side enters the score. The other side confirms it.</p>
+      <p>If the two sides enter different scores, an organizer decides.</p>
+      <p>You can change a score until <strong>midnight at the end of {{ match_day|date:"D, M j" }}</strong> (Central time). After that, ask an organizer.</p>
+      {% if user.is_staff %}<p class="pt-2"><a href="{% url 'scoring:admin_match' event.pk match.pk %}" class="link">Organizer tools for this match</a></p>{% endif %}
+    </aside>
+  </div>
+{% endblock %}

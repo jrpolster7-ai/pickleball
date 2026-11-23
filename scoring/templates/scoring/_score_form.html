@@ -1,0 +1,26 @@
+{# Game-by-game score boxes. Takes form, match, action, button. #}
+<form method="post" class="space-y-4">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="{{ action }}">
+  {% for error in form.non_field_errors %}<p class="error rounded-lg bg-red-50 px-3 py-2">{{ error }}</p>{% endfor %}
+  <table class="w-full max-w-xl border-collapse">
+    <thead>
+      <tr class="text-left text-sm text-stone-500">
+        <th class="w-24 pb-2 font-semibold">Game</th>
+        <th class="pb-2 pr-3 font-semibold">{{ match.side_a.name }}</th>
+        <th class="pb-2 font-semibold">{{ match.side_b.name }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for number, a, b, optional in form.rows %}
+        <tr>
+          <td class="py-1 font-semibold">{{ number }}{% if optional %} <span class="block text-xs font-normal text-stone-500">if needed</span>{% endif %}</td>
+          <td class="py-1 pr-3"><div class="w-24">{{ a }}</div>{% for e in a.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+          <td class="py-1"><div class="w-24">{{ b }}</div>{% for e in b.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="help">Games to {{ event.points_to_win }}{% if event.win_by_two %}, win by 2{% endif %}{% if event.point_cap %}, cap {{ event.point_cap }}{% endif %}.{% if event.games_per_match == 3 %} Best of 3: leave game 3 empty if it wasn't played.{% endif %}</p>
+  <button class="btn-primary">{{ button }}</button>
+</form>
