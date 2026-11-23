@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Schedule · {{ event.title }}{% endblock %}
+{% block content %}
+  {% include "scheduling/_header.html" %}
+
+  {% if problem %}
+    <div class="card mt-6 max-w-2xl">
+      <h2>We can't make a schedule yet</h2>
+      <p class="mt-2">{{ problem }}</p>
+      <p class="mt-4"><a href="{% url 'events:event_edit' event.pk %}" class="btn-secondary">Edit settings</a></p>
+    </div>
+  {% else %}
+    <p class="mt-4 rounded-lg border border-ball-dark bg-ball/20 px-4 py-3">
+      <strong>This is a preview.</strong> Nothing is saved until you publish. Don't like the matchups? Shuffle for a new mix.
+    </p>
+
+    <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+      <div class="space-y-4 lg:col-span-2">
+        {% if event.is_multi_week %}<h2>Week 1 · {{ preview.dates.0|date:"D, M j" }}</h2>{% endif %}
+        {% for rnd in preview.rounds %}
+          {% include "scheduling/_round.html" with number=rnd.number start=rnd.start_time matches=rnd.matches sitting_out=rnd.sitting_out %}
+        {% endfor %}
+      </div>
+
+      <aside class="space-y-6 lg:sticky lg:top-4">
+        <section class="card">
+          <h2>Summary</h2>
+          <dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+            {% if event.is_scramble %}
+              <dt class="font-semibold">Players</dt><dd>{{ preview.player_count }}</dd>
+            {% else %}
+              <dt class="font-semibold">Teams</dt><dd>{{ preview.team_count }}</dd>
+              <dt class="font-semibold">Per team</dt><dd>{% with r=preview.count_range %}{% if r.0 == r.1 %}{{ r.0 }}{% else %}{{ r.0 }} or {{ r.1 }}{% endif %}{% endwith %} matches{% if event.is_multi_week %} a week{% endif %}</dd>
+            {% endif %}
+            <dt class="font-semibold">Rounds</dt><dd>{{ preview.rounds|length }}{% if event.is_multi_week %} a week{% endif %}</dd>
+            <dt class="font-semibold">Matches</dt><dd>{{ preview.matches_per_week }}{% if event.is_multi_week %} a week, {{ preview.total_matches }} in all{% endif %}</dd>
+            <dt class="font-semibold">{% if event.is_multi_week %}Dates{% else %}Date{% endif %}</dt>
+            <dd>{% for d in preview.dates %}{{ d|date:"M j" }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd>
+          </dl>
+          {% if preview.notes or event.is_multi_week %}
+            <ul class="mt-4 list-disc space-y-1 pl-5 text-sm">
+              {% for note in preview.notes %}<li>{{ note }}</li>{% endfor %}
+              {% if event.is_multi_week %}<li>Every week has the same matchups. The round order is shuffled each week.</li>{% endif %}
+            </ul>
+          {% endif %}
+          <div class="mt-5 flex flex-wrap gap-2">
+            <form method="post" action="{% url 'scheduling:publish' event.pk %}" class="max-sm:w-full">
+              {% csrf_token %}<input type="hidden" name="seed" value="{{ preview.seed }}">
+              <button class="btn-primary">Publish schedule</button>
+            </form>
+            <a href="?seed={{ next_seed }}" class="btn-secondary">Shuffle matchups</a>
+          </div>
+          <p class="help">Changed your mind about courts or times? <a href="{% url 'events:event_edit' event.pk %}" class="link">Edit settings</a> and come back.</p>
+        </section>
+
+        {% include "scheduling/_counts.html" with counts=preview.counts %}
+      </aside>
+    </div>
+  {% endif %}
+{% endblock %}

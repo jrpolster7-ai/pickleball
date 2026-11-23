@@ -16,6 +16,7 @@
     </div>
     <div class="flex flex-wrap gap-2 max-sm:w-full">
       <a href="{% url 'events:event_edit' event.pk %}" class="btn-secondary">Edit settings</a>
+      <a href="{% url 'scheduling:schedule' event.pk %}" class="{% if event.has_schedule %}btn-secondary{% else %}btn-primary{% endif %}">{% if event.has_schedule %}Schedule{% else %}Make the schedule{% endif %}</a>
       {% if event.status == "DRAFT" %}
         <form method="post" action="{% url 'events:set_status' event.pk %}" class="max-sm:w-full">{% csrf_token %}<input type="hidden" name="status" value="OPEN"><button class="btn-primary">Open sign-ups</button></form>
       {% elif event.status == "OPEN" %}
@@ -110,6 +111,8 @@
             <dt class="font-semibold">Teams</dt><dd>{{ event.team_count }}</dd>
             <dt class="font-semibold">Matches per team</dt><dd>{% if per_team_low == per_team_high %}{{ per_team_low }}{% else %}{{ per_team_low }} or {{ per_team_high }}{% endif %} ({{ event.total_matches }} total)</dd>
             <dt class="font-semibold">Full round robin</dt><dd>{{ full_rr.0 }} per team ({{ full_rr.1 }} total), for reference</dd>
+          {% else %}
+            <dt class="font-semibold">Rounds</dt><dd>{{ event.scramble_rounds|default:"Not set yet" }}</dd>
           {% endif %}
           <dt class="font-semibold">Courts</dt><dd>{{ event.court_count }}</dd>
           <dt class="font-semibold">Games</dt><dd>{{ event.get_games_per_match_display }} to {{ event.points_to_win }}{% if event.win_by_two %}, win by 2{% endif %}{% if event.point_cap %}, cap {{ event.point_cap }}{% endif %}</dd>

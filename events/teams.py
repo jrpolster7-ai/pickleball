@@ -1,4 +1,4 @@
-"""Doubles teams: create, invite by username or team code, admin-built teams (section 5)."""
+﻿"""Doubles teams: create, invite by username or team code, admin-built teams (section 5)."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -17,8 +17,38 @@ def side_for(event, player) -> Side | None:
     return Side.objects.filter(event=event, players=player).first()
 
 
+def open_spot(event) -> Side | None:
+    """After the schedule is published, new teams fill its empty team spots."""
+    return Side.objects.filter(event=event, slot__isnull=False, players=None).order_by("slot").first()
+
+
 def _team_slots_full(event) -> bool:
+    if event.has_schedule:
+        return open_spot(event) is None
     return bool(event.team_count) and event.sides.count() >= event.team_count
+
+
+def _new_side(event, created_by=None) -> Side:
+    """A new team, or the next open spot once the schedule is published."""
+    spot = open_spot(event) if event.has_schedule else None
+    if spot:
+        spot.team_code = spot.team_code or new_code()
+        spot.created_by = created_by
+        spot.save(update_fields=["team_code", "created_by"])
+        return spot
+    return Side.objects.create(event=event, team_code=new_code(), created_by=created_by)
+
+
+def empty_out(side) -> None:
+    """Remove everyone from a team. A scheduled team keeps its spot; others are deleted."""
+    if side.is_scheduled:
+        side.players.clear()
+        side.invites.filter(status=TeamInvite.Status.PENDING).update(status=TeamInvite.Status.CANCELLED)
+        side.team_code = new_code()  # the old code stops working
+        side.created_by = None
+        side.save(update_fields=["team_code", "created_by"])
+    else:
+        side.delete()
 
 
 def _check_doubles(event) -> None:
@@ -36,7 +66,7 @@ def create_team(event, player) -> Side:
         raise TeamError("You're already on a team in this event.")
     if _team_slots_full(event):
         raise TeamError("All the team spots in this event are taken.")
-    side = Side.objects.create(event=event, team_code=new_code(), created_by=player)
+    side = _new_side(event, created_by=player)
     side.players.add(player)
     return side
 
@@ -137,7 +167,7 @@ def join_by_team_code(side, player) -> Side:
 def leave_team(side, player) -> None:
     side.players.remove(player)
     if not side.players.exists():
-        side.delete()
+        empty_out(side)
 
 
 @transaction.atomic
@@ -156,13 +186,15 @@ def admin_build_team(event, players, *, override: bool = False) -> Side:
         problem = team_problem(event.division, players)
         if problem:
             raise TeamError(f"{problem} Tick 'override' to pair them anyway.")
-        if _team_slots_full(event):
+        if _team_slots_full(event) and not event.has_schedule:
             raise TeamError("All the team spots are taken. Tick 'override' to add one anyway.")
-    side = Side.objects.create(event=event, team_code=new_code())
+    if event.has_schedule and open_spot(event) is None:
+        raise TeamError("The schedule is set and every team spot is filled. Split up a team first.")
+    side = _new_side(event)
     side.players.add(*players)
     return side
 
 
 def delete_team(side) -> None:
-    """Break up a team. The players stay registered."""
-    side.delete()
+    """Break up a team. The players stay registered. A scheduled team keeps its spot."""
+    empty_out(side)

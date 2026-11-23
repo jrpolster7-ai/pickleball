@@ -191,8 +191,15 @@ class Event(EventSettings):
         null=True, blank=True, validators=[MinValueValidator(1)]
     )
     advancing_count = models.PositiveSmallIntegerField(null=True, blank=True)
+    scramble_rounds = models.PositiveSmallIntegerField(
+        "rounds", null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text="Scramble only. How many rounds to play.",
+    )
+    schedule_seed = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Set when the schedule is published. Same seed, same schedule."
+    )
 
-    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    status =models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
 
     player_code = models.CharField(max_length=12, unique=True)
     player_code_enabled = models.BooleanField(default=True)
@@ -240,6 +247,15 @@ class Event(EventSettings):
     def is_multi_week(self) -> bool:
         return self.weeks > 1
 
+    @property
+    def has_schedule(self) -> bool:
+        return self.rounds.exists()
+
+    @property
+    def schedule_locked(self) -> bool:
+        """Once play starts the schedule is never regenerated (section 6)."""
+        return self.status not in (self.Status.DRAFT, self.Status.OPEN)
+
 
 class Registration(models.Model):
     class Status(models.TextChoices):
@@ -270,13 +286,20 @@ class Side(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="sides")
     players = models.ManyToManyField("accounts.Player", related_name="sides")
     team_code = models.CharField(max_length=12, unique=True, null=True, blank=True)
+    # Team number in the schedule, 1 and up. Set when the schedule is published.
+    # Blank for unscheduled teams and for Scramble's per-round sides.
+    slot = models.PositiveSmallIntegerField(null=True, blank=True)
+    pool = models.PositiveSmallIntegerField(null=True, blank=True)
     created_by = models.ForeignKey(
         "accounts.Player", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["id"]
+        ordering = ["slot", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["event", "slot"], name="one_side_per_slot"),
+        ]
 
     def __str__(self):
         return self.name
@@ -284,7 +307,13 @@ class Side(models.Model):
     @property
     def name(self) -> str:
         names = [p.full_name for p in self.players.all()]
-        return " & ".join(names) if names else "Empty team"
+        if names:
+            return " & ".join(names)
+        return f"Team {self.slot} (open spot)" if self.slot else "Empty team"
+
+    @property
+    def is_scheduled(self) -> bool:
+        return self.slot is not None
 
 
 class TeamInvite(models.Model):

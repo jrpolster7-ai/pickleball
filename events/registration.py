@@ -1,4 +1,4 @@
-"""Joining, removing, and moving players between events (section 5)."""
+﻿"""Joining, removing, and moving players between events (section 5)."""
 
 from django.db import transaction
 
@@ -64,10 +64,14 @@ def admin_add(event, player, *, override: bool = False) -> Registration:
 @transaction.atomic
 def remove(event, player) -> None:
     """Take a player out of an event, along with their team spot and invites."""
-    for side in Side.objects.filter(event=event, players=player):
+    from .teams import empty_out
+
+    # Scramble's per-round sides stay as played; swapping in a substitute is an admin edit.
+    sides = [] if event.is_scramble else Side.objects.filter(event=event, players=player)
+    for side in sides:
         side.players.remove(player)
         if not side.players.exists():
-            side.delete()
+            empty_out(side)
     TeamInvite.objects.filter(side__event=event, player=player).delete()
     TeamInvite.objects.filter(side__event=event, invited_by=player).delete()
     Registration.objects.filter(event=event, player=player).delete()

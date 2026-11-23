@@ -1,4 +1,4 @@
-from django import forms
+﻿from django import forms
 
 from accounts.models import Player
 
@@ -20,7 +20,7 @@ class EventForm(forms.ModelForm):
     groups = [
         ("The basics", ["title", "level", "division", "location"]),
         ("When", ["start_date", "weeks", "end_date", "weekly_day", "start_time"]),
-        ("Teams and matches", ["team_count", "matches_per_team", "total_matches", "court_count", "pool_size"]),
+        ("Teams and matches", ["team_count", "matches_per_team", "total_matches", "scramble_rounds", "court_count", "pool_size"]),
         ("Scoring", ["games_per_match", "points_to_win", "win_by_two", "point_cap", "players_enter_scores"]),
         ("Timing", ["minutes_per_match", "break_minutes"]),
         ("Sign-ups", ["registration_mode", "max_participants"]),
@@ -32,7 +32,7 @@ class EventForm(forms.ModelForm):
         fields = [
             "title", "level", "division", "location",
             "start_date", "weeks", "end_date", "weekly_day", "start_time",
-            "team_count", "matches_per_team", "total_matches", "court_count", "pool_size",
+            "team_count", "matches_per_team", "total_matches", "scramble_rounds", "court_count", "pool_size",
             "games_per_match", "points_to_win", "win_by_two", "point_cap", "players_enter_scores",
             "minutes_per_match", "break_minutes",
             "registration_mode", "max_participants",
@@ -48,7 +48,8 @@ class EventForm(forms.ModelForm):
             "end_date": "Or set the end date and the weeks fill in.",
             "weekly_day": "For multi-week events. Leave blank to use the start date's day.",
             "team_count": "You can set this before anyone signs up. Not used for Scramble.",
-            "matches_per_team": "Change this or the total. The other one updates.",
+            "matches_per_team": "Change this or the total. The other one updates. For multi-week events, this is per week.",
+            "scramble_rounds": "Scramble only. Everyone gets new partners each round.",
             "court_count": "1 to 8.",
             "max_participants": "Up to 500.",
             "pool_size": "Optional. For big events, teams per pool, like 6.",
@@ -58,7 +59,7 @@ class EventForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["end_date"].required = False
         self.fields["weeks"].required = False
-        for name in ["weeks", "team_count", "matches_per_team", "total_matches", "court_count",
+        for name in ["weeks", "team_count", "matches_per_team", "total_matches", "scramble_rounds", "court_count",
                      "pool_size", "points_to_win", "point_cap", "minutes_per_match",
                      "break_minutes", "max_participants"]:
             self.fields[name].widget.attrs.update(NUMBER)
@@ -101,6 +102,8 @@ class EventForm(forms.ModelForm):
         per_team = data.get("matches_per_team")
         total = data.get("total_matches")
         if division and division.is_scramble:
+            if not data.get("scramble_rounds"):
+                self.add_error("scramble_rounds", "Enter how many rounds to play.")
             return
         if not teams:
             self.add_error("team_count", "Enter how many teams will play.")

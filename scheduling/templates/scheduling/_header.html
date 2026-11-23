@@ -1,0 +1,6 @@
+<p><a href="{% url 'events:manage_event' event.pk %}" class="link">← {{ event.title }}</a></p>
+<div class="mt-2 flex flex-wrap items-center gap-3">
+  <h1>Schedule</h1>
+  <span class="chip">{{ event.get_status_display }}</span>
+</div>
+<p class="mt-1">{{ event.level }} · {{ event.division }} · {{ event.court_count }} court{{ event.court_count|pluralize }} · {{ event.minutes_per_match }} min matches, {{ event.break_minutes }} min between rounds</p>

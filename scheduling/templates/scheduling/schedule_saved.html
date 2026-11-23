@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Schedule · {{ event.title }}{% endblock %}
+{% block content %}
+  {% include "scheduling/_header.html" %}
+
+  <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
+    <div class="space-y-6 lg:col-span-2">
+      {% for session in sessions %}
+        <details class="group" {% if forloop.first %}open{% endif %}>
+          <summary class="flex cursor-pointer list-none items-center justify-between rounded-lg bg-court px-4 py-3 font-semibold text-white hover:bg-court-dark">
+            <span>{% if event.is_multi_week %}Week {{ session.week }} · {% endif %}{{ session.date|date:"l, M j" }}</span>
+            <span class="text-sm font-normal">{{ session.rounds.all|length }} rounds <span aria-hidden="true" class="ml-1 inline-block group-open:rotate-180">▾</span></span>
+          </summary>
+
+          <div class="mt-4 space-y-4">
+            {% for rnd in session.rounds.all %}
+              <section class="card scroll-mt-4" id="round-{{ rnd.pk }}">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                  <h3 class="text-lg font-bold text-court">Round {{ rnd.number }}</h3>
+                  <form method="post" action="{% url 'scheduling:round_time' event.pk rnd.pk %}" class="flex items-end gap-2">
+                    {% csrf_token %}
+                    <label for="{{ rnd.time_form.start_time.id_for_label }}" class="text-sm font-semibold">Round starts</label>
+                    <div class="w-36">{{ rnd.time_form.start_time }}</div>
+                    <button class="btn-secondary btn-small">Move round</button>
+                  </form>
+                </div>
+                <table class="table mt-2">
+                  <thead><tr><th class="w-20">Court</th><th>Side A</th><th class="w-8"><span class="sr-only">versus</span></th><th>Side B</th><th class="max-sm:hidden">Time</th><th><span class="sr-only">Edit</span></th></tr></thead>
+                  <tbody>
+                    {% for match in rnd.matches.all %}
+                      <tr>
+                        <td><span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-court font-bold text-white">{{ match.court }}</span></td>
+                        <td>{{ match.side_a.name }}{% if match.pool %} <span class="chip max-sm:hidden">{{ match.pool_label }}</span>{% endif %}</td>
+                        <td class="text-sm text-stone-500">vs</td>
+                        <td>{{ match.side_b.name }}</td>
+                        <td class="max-sm:hidden {% if match.start_time != rnd.start_time %}font-semibold text-court{% endif %}">{{ match.start_time|time:"g:i A" }}</td>
+                        <td class="text-right">
+                          <details class="relative">
+                            <summary class="btn-secondary btn-small list-none">Edit</summary>
+                            <form method="post" action="{% url 'scheduling:match_edit' event.pk match.pk %}" class="card absolute right-0 z-10 mt-2 w-64 space-y-3 text-left shadow-lg">
+                              {% csrf_token %}
+                              {% include "includes/form_fields.html" with form=match.edit_form %}
+                              <button class="btn-primary btn-small">Save match</button>
+                            </form>
+                          </details>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </section>
+            {% endfor %}
+          </div>
+        </details>
+      {% endfor %}
+    </div>
+
+    <aside class="space-y-6 lg:sticky lg:top-4">
+      <section class="card">
+        <h2>Published</h2>
+        {% if event.schedule_locked %}
+          <p class="mt-2">Play has started, so the schedule stays as it is. You can still move rounds and edit matches. Every change is logged.</p>
+        {% else %}
+          <p class="mt-2">Players can't see the schedule screens yet, but you can still change it. When you're ready, start play.</p>
+          <p class="help">Starting play locks the matchups. After that you can only edit matches one at a time.</p>
+          <form method="post" action="{% url 'scheduling:start_play' event.pk %}" class="mt-4" onsubmit="return confirm('Start the round robin? The matchups will be locked.')">
+            {% csrf_token %}<button class="btn-primary">Start play</button>
+          </form>
+        {% endif %}
+
+        <div class="mt-5 space-y-3 border-t border-line pt-4">
+          <form method="post" action="{% url 'scheduling:retime' event.pk %}" onsubmit="return confirm('Recalculate every start time? Times you changed by hand will be replaced.')">
+            {% csrf_token %}<button class="btn-secondary btn-small">Recalculate times</button>
+          </form>
+          <p class="help">Use this after changing match length or break time in <a href="{% url 'events:event_edit' event.pk %}" class="link">settings</a>.</p>
+          {% if not event.schedule_locked %}
+            <form method="post" action="{% url 'scheduling:clear' event.pk %}" onsubmit="return confirm('Clear the whole schedule? Teams and players stay.')">
+              {% csrf_token %}<button class="btn-danger btn-small">Clear schedule</button>
+            </form>
+            <p class="help">Clear it to change teams, courts, or match counts, then publish again.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      {% include "scheduling/_counts.html" %}
+    </aside>
+  </div>
+{% endblock %}
