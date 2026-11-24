@@ -119,10 +119,12 @@ def _close_open_submissions(match: Match, status=Status.RESOLVED) -> None:
 
 @transaction.atomic
 def submit(match: Match, player, games, now=None) -> ScoreSubmission:
-    """A player enters the score. The other side confirms, or enters theirs.
+    """A player enters the score, or corrects the one their opponent entered.
 
-    If both sides have entered the same score, it's final. If they differ,
-    the match is flagged for an admin.
+    Players settle it between themselves: a correction goes back to the other
+    side to confirm. When both sides have entered the same score, it's final.
+    An organizer is only involved if someone asks (ask_organizer). Once asked,
+    entries keep the match flagged, but a matching pair still makes it final.
     """
     match = _lock(match)
     problem = entry_problem(match, player, now)
@@ -141,17 +143,42 @@ def submit(match: Match, player, games, now=None) -> ScoreSubmission:
     if theirs and theirs.game_list == games:
         _confirm(match, theirs, mine, player)
         audit.log(player.user, "score confirmed", match, old=old, new=rules.score_text(games), event=match.event)
-    elif theirs:
-        ScoreSubmission.objects.filter(pk__in=[theirs.pk, mine.pk]).update(status=Status.DISPUTED)
+    elif match.status == Match.Status.DISPUTED:
+        # An organizer was asked. Keep it flagged with this side's latest entry.
+        ScoreSubmission.objects.filter(pk=mine.pk).update(status=Status.DISPUTED)
         mine.status = Status.DISPUTED
-        match.status = Match.Status.DISPUTED
+        audit.log(player.user, "score entered", match, old=theirs.score if theirs else old, new=mine.score,
+                  event=match.event)
+    elif theirs:
+        # A correction. It goes back to the other side to confirm.
+        ScoreSubmission.objects.filter(pk=theirs.pk).update(status=Status.SUPERSEDED, decided_at=timezone.now())
+        match.status = Match.Status.PENDING
         match.save(update_fields=["status"])
-        audit.log(player.user, "score disputed", match, old=theirs.score, new=mine.score, event=match.event)
+        audit.log(player.user, "score corrected", match, old=theirs.score, new=mine.score, event=match.event)
     else:
         match.status = Match.Status.PENDING
         match.save(update_fields=["status"])
         audit.log(player.user, "score entered", match, old=old, new=mine.score, event=match.event)
     return mine
+
+
+@transaction.atomic
+def ask_organizer(match: Match, player, now=None) -> None:
+    """Either side can flag a score they can't agree on. The organizer decides."""
+    match = _lock(match)
+    problem = entry_problem(match, player, now)
+    if problem:
+        raise ScoreError(problem)
+    if match.status == Match.Status.DISPUTED:
+        raise ScoreError("An organizer has already been asked to look at this match.")
+    waiting = match.submissions.filter(status=Status.PENDING)
+    if not waiting.exists():
+        raise ScoreError("Enter the score first. Then you can ask an organizer if you can't agree.")
+    entered = ", ".join(s.score for s in waiting)
+    waiting.update(status=Status.DISPUTED)
+    match.status = Match.Status.DISPUTED
+    match.save(update_fields=["status"])
+    audit.log(player.user, "organizer asked", match, new=entered, event=match.event)
 
 
 @transaction.atomic
@@ -254,27 +281,38 @@ class PlayerView:
     label: str
     action: str  # "enter", "confirm", "change", or ""
     waiting: ScoreSubmission | None = None  # the other side's entry to confirm
+    mine: ScoreSubmission | None = None  # this side's entry that's still open
+    can_ask: bool = False  # may ask an organizer to decide
+    corrected: bool = False  # the other side changed this side's entry
 
 
 def player_view(match: Match, player, now=None) -> PlayerView:
     side = player_side(match, player)
     problem = entry_problem(match, player, now)
-    open_subs = [s for s in match.submissions.all() if s.status in OPEN_STATUSES]
+    subs = list(match.submissions.all())
+    open_subs = [s for s in subs if s.status in OPEN_STATUSES]
     theirs = next((s for s in open_subs if s.side != side), None)
     mine = next((s for s in open_subs if s.side == side), None)
     can_enter = problem is None
+    can_ask = can_enter and match.status == Match.Status.PENDING and bool(open_subs)
 
     if match.status == Match.Status.DISPUTED:
-        return PlayerView(side, "The scores don't match. An organizer will sort it out.", "change" if can_enter else "")
+        return PlayerView(side, "An organizer has been asked to decide. If you two agree first, "
+                                "enter the same score and it's final.",
+                          "change" if can_enter else "", waiting=None, mine=mine)
     if match.status == Match.Status.CONFIRMED and not open_subs:
         label = f"Final: {match.score}" + (" (forfeit)" if match.forfeit else "")
         return PlayerView(side, label, "change" if can_enter else "")
     if theirs:
-        return PlayerView(side, f"Your opponent entered {theirs.score}. Is that right?",
-                          "confirm" if can_enter else "", waiting=theirs)
+        # They corrected an entry from this side, or entered first.
+        corrected = any(s.side == side and s.pk < theirs.pk for s in subs)
+        verb = "changed the score to" if corrected else "entered"
+        return PlayerView(side, f"Your opponent {verb} {theirs.score}. Is that right?",
+                          "confirm" if can_enter else "", waiting=theirs, mine=mine, can_ask=can_ask,
+                          corrected=corrected)
     if mine:
         return PlayerView(side, f"You entered {mine.score}. Waiting for your opponent to confirm.",
-                          "change" if can_enter else "")
+                          "change" if can_enter else "", mine=mine, can_ask=can_ask)
     if can_enter:
         return PlayerView(side, "No score yet.", "enter")
     return PlayerView(side, problem or "No score yet.", "")

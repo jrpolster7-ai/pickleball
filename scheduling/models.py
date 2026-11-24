@@ -41,7 +41,7 @@ class Match(models.Model):
     class Status(models.TextChoices):
         SCHEDULED = "SCHEDULED", "Not played yet"
         PENDING = "PENDING", "Waiting for confirmation"
-        DISPUTED = "DISPUTED", "Sides disagree"
+        DISPUTED = "DISPUTED", "Organizer asked"
         CONFIRMED = "CONFIRMED", "Final"
 
     event = models.ForeignKey("events.Event", on_delete=models.CASCADE, related_name="matches")

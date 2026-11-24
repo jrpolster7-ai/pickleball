@@ -27,6 +27,15 @@ def _current_games(match):
     return [(g.side_a_points, g.side_b_points) for g in match.games.all()]
 
 
+def _starting_games(match, view):
+    """What the score boxes start with: the entry being checked, then your own, then the final score."""
+    if view.waiting:
+        return view.waiting.game_list
+    if view.mine:
+        return view.mine.game_list
+    return _current_games(match)
+
+
 # --- Players ---------------------------------------------------------------
 
 @login_required
@@ -37,13 +46,19 @@ def match_score(request, match_pk):
     if view.side is None and not request.user.is_staff:
         raise Http404
 
+    # Confirming also offers the score boxes, so a player can correct a wrong entry.
     form = None
-    if view.action in ("enter", "change"):
-        form = ScoreForm(request.POST or None, match=match,
-                         initial=ScoreForm.initial_for(_current_games(match)))
+    is_entry = request.method == "POST" and request.POST.get("action") not in ("confirm", "ask")
+    if view.action in ("enter", "change", "confirm"):
+        form = ScoreForm(request.POST if is_entry else None, match=match,
+                         initial=ScoreForm.initial_for(_starting_games(match, view)))
 
     if request.method == "POST":
         try:
+            if request.POST.get("action") == "ask":
+                services.ask_organizer(match, player)
+                messages.success(request, "An organizer has been asked to decide this score.")
+                return redirect("events:event_detail", pk=match.event_id)
             if request.POST.get("action") == "confirm":
                 submission = get_object_or_404(ScoreSubmission, pk=request.POST.get("submission"), match=match)
                 services.confirm(submission, player)
@@ -56,7 +71,7 @@ def match_score(request, match_pk):
                 if saved.status == ScoreSubmission.Status.CONFIRMED:
                     messages.success(request, "Both sides agree. The score is final.")
                 elif saved.status == ScoreSubmission.Status.DISPUTED:
-                    messages.warning(request, "Your score doesn't match your opponent's. An organizer will take a look.")
+                    messages.warning(request, "Score saved. An organizer is deciding this one.")
                 else:
                     messages.success(request, "Score saved. Your opponent will be asked to confirm it.")
                 return redirect("events:event_detail", pk=match.event_id)

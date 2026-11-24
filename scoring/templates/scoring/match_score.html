@@ -7,36 +7,68 @@
     <section class="card lg:col-span-2">
       {% include "scoring/_match_header.html" %}
 
-      <p class="mt-6 rounded-lg bg-mist px-4 py-3 font-semibold">{{ view.label }}</p>
-
       {% if view.action == "confirm" %}
-        <div class="mt-4 flex flex-wrap gap-2">
+        <h2 class="mt-6">Is this score right?</h2>
+        <p class="help">{% if view.corrected %}Your opponent changed the score you entered. Here's their version.{% else %}Your opponent entered this score.{% endif %} Check each game.</p>
+        <div class="mt-4">
+          {% include "scoring/_score_table.html" with games=view.waiting.game_list winner=view.waiting.winner you=view.side %}
+        </div>
+        <div class="mt-5 flex flex-wrap gap-2">
           <form method="post" class="max-sm:w-full">
             {% csrf_token %}
             <input type="hidden" name="action" value="confirm">
             <input type="hidden" name="submission" value="{{ view.waiting.pk }}">
             <button class="btn-primary">Yes, that's right</button>
           </form>
-          <a href="#fix" class="btn-secondary" onclick="document.getElementById('fix').open = true">No, that's wrong</a>
+          <button type="button" class="btn-secondary" data-open-fix>No, fix the score</button>
         </div>
-        <details id="fix" class="mt-6 border-t border-line pt-4">
-          <summary class="link cursor-pointer">Enter the score you think is right</summary>
-          <p class="help mt-2">If your score doesn't match theirs, an organizer will be asked to decide.</p>
+        <details id="fix" class="mt-6 border-t border-line pt-4" {% if form.errors %}open{% endif %}>
+          <summary class="link cursor-pointer">Enter the right score</summary>
+          <p class="help mt-2">We filled in their score. Change the games that are wrong, then send it. Your opponent gets to confirm your version.</p>
           <div class="mt-4">
-            {% include "scoring/_score_form.html" with action="enter" button="Send my score" %}
+            {% include "scoring/_score_form.html" with action="enter" button="Send my score" you=view.side %}
           </div>
         </details>
-      {% elif form %}
-        <div class="mt-6">
-          {% include "scoring/_score_form.html" with action="enter" button="Save score" %}
-        </div>
+        <script>
+          document.querySelector("[data-open-fix]").addEventListener("click", function () {
+            var fix = document.getElementById("fix");
+            fix.open = true;
+            fix.scrollIntoView({behavior: "smooth", block: "start"});
+            var first = fix.querySelector("input[type=number]");
+            if (first) first.focus({preventScroll: true});
+          });
+        </script>
+      {% if view.can_ask %}
+        <form method="post" class="mt-6 border-t border-line pt-4" onsubmit="return confirm('Ask an organizer to decide this score?')">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="ask">
+          <p class="help">Can't agree on the score?</p>
+          <button class="btn-secondary btn-small mt-2">Ask an organizer to decide</button>
+        </form>
+      {% endif %}
+      {% else %}
+        <p class="mt-6 rounded-lg bg-mist px-4 py-3 font-semibold">{{ view.label }}</p>
+        {% if form %}
+          <div class="mt-6">
+            {% include "scoring/_score_form.html" with action="enter" button="Save score" you=view.side %}
+          </div>
+        {% endif %}
+        {% if view.can_ask %}
+        <form method="post" class="mt-6 border-t border-line pt-4" onsubmit="return confirm('Ask an organizer to decide this score?')">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="ask">
+          <p class="help">Can't agree on the score?</p>
+          <button class="btn-secondary btn-small mt-2">Ask an organizer to decide</button>
+        </form>
+      {% endif %}
       {% endif %}
     </section>
 
     <aside class="card space-y-2 text-sm">
       <h2>How scoring works</h2>
       <p>Either side enters the score. The other side confirms it.</p>
-      <p>If the two sides enter different scores, an organizer decides.</p>
+      <p>If your opponent's score is wrong, fix it. They confirm your version, and so on until you agree.</p>
+      <p>Can't agree? Either side can ask an organizer to decide.</p>
       <p>You can change a score until <strong>midnight at the end of {{ match_day|date:"D, M j" }}</strong> (Central time). After that, ask an organizer.</p>
       {% if user.is_staff %}<p class="pt-2"><a href="{% url 'scoring:admin_match' event.pk match.pk %}" class="link">Organizer tools for this match</a></p>{% endif %}
     </aside>

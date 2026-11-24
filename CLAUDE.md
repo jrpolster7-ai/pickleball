@@ -186,7 +186,8 @@ Put all logic in `scheduling.py` with unit tests. It must be repeatable when giv
 ## 7. Score entry (DECIDED)
 - If the event allows player entry, either side of a match can enter the score.
 - The other side must confirm.
-- If the two sides disagree, flag the match for the admin.
+- DECIDED (changed after Phase 8). Players settle disagreements between themselves. If one side thinks the entered score is wrong, they enter a correction, and it goes back to the other side to confirm. This can go back and forth. When both sides have entered the same score, it is final.
+- Either side can choose "Ask an organizer to decide" while a score is waiting. That flags the match for the admin. Once flagged, a matching pair of entries still makes it final, or the admin sets the score.
 - Scores are entered game by game, for example Game 1 is 11 to 7.
 - Validate scores against the event rules. Reject impossible scores, such as 11 to 10 when win by two is on.
 - Player edits lock at midnight at the end of the match's scheduled date, in America/Chicago. After that, only an admin can change the score.

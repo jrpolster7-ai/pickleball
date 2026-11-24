@@ -18,12 +18,12 @@ class Game(models.Model):
 
 
 class ScoreSubmission(models.Model):
-    """A score typed in by a player. The other side confirms it, or disagrees."""
+    """A score typed in by a player. The other side confirms it or enters a correction."""
 
     class Status(models.TextChoices):
         PENDING = "PENDING", "Waiting for the other side"
         CONFIRMED = "CONFIRMED", "Confirmed"
-        DISPUTED = "DISPUTED", "Sides disagree"
+        DISPUTED = "DISPUTED", "Organizer asked"
         SUPERSEDED = "SUPERSEDED", "Replaced by a newer entry"
         RESOLVED = "RESOLVED", "Settled by an organizer"
 
@@ -51,6 +51,13 @@ class ScoreSubmission(models.Model):
     @property
     def game_list(self) -> list[tuple[int, int]]:
         return [(int(a), int(b)) for a, b in self.games]
+
+    @property
+    def winner(self) -> str:
+        """'A' or 'B'."""
+        from .rules import match_winner
+
+        return match_winner(self.game_list)
 
     @property
     def score(self) -> str:

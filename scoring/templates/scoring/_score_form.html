@@ -1,4 +1,4 @@
-{# Game-by-game score boxes. Takes form, match, action, button. #}
+{# Game-by-game score boxes. Takes form, match, action, button, and optionally you ("A" or "B"). #}
 <form method="post" class="space-y-4">
   {% csrf_token %}
   <input type="hidden" name="action" value="{{ action }}">
@@ -7,8 +7,8 @@
     <thead>
       <tr class="text-left text-sm text-stone-500">
         <th class="w-24 pb-2 font-semibold">Game</th>
-        <th class="pb-2 pr-3 font-semibold">{{ match.label_a }}</th>
-        <th class="pb-2 font-semibold">{{ match.label_b }}</th>
+        <th class="pb-2 pr-3 font-semibold">{{ match.label_a }}{% if you == "A" %} <span class="chip bg-ball font-semibold text-court">You</span>{% endif %}</th>
+        <th class="pb-2 font-semibold">{{ match.label_b }}{% if you == "B" %} <span class="chip bg-ball font-semibold text-court">You</span>{% endif %}</th>
       </tr>
     </thead>
     <tbody>

@@ -54,7 +54,7 @@ def test_a_disputed_match_holds_the_round(league, admin_user):  # noqa: F811
     a = second.side_a.players.first()
     b = second.side_b.players.first()
     scoring.submit(second, a, [(11, 5)])
-    scoring.submit(second, b, [(5, 11)])
+    scoring.ask_organizer(second, b)
     assert Match.objects.get(pk=second.pk).status == Match.Status.DISPUTED
     assert rnd.pk not in display.revealed_round_ids(event)
     scoring.admin_set_score(second, [(11, 5)], admin_user)

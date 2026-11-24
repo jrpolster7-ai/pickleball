@@ -86,14 +86,60 @@ def test_both_sides_enter_the_same_score(setup):
     assert match.winner == "B"
 
 
-def test_different_scores_flag_the_match(setup):
+def test_a_correction_goes_back_to_the_other_side(setup):
+    _, match, a, b = setup()
+    services.submit(match, a[0], [(11, 7), (11, 9)])
+    services.submit(match, b[0], [(11, 7), (9, 11), (8, 11)])
+    match = reload(match)
+    assert match.status == Match.Status.PENDING, "no organizer needed"
+    assert list(match.submissions.order_by("id").values_list("status", flat=True)) == [Status.SUPERSEDED, Status.PENDING]
+    view = services.player_view(match, a[0])
+    assert view.action == "confirm" and "changed the score to 11-7, 9-11, 8-11" in view.label
+    assert AuditLog.objects.filter(action="score corrected", old_value="11-7, 11-9").exists()
+
+    services.confirm(view.waiting, a[0])
+    match = reload(match)
+    assert match.status == Match.Status.CONFIRMED and match.winner == "B"
+    assert games_of(match) == [(11, 7), (9, 11), (8, 11)]
+
+
+def test_corrections_can_go_back_and_forth(setup):
     _, match, a, b = setup()
     services.submit(match, a[0], [(11, 7), (11, 9)])
     services.submit(match, b[0], [(7, 11), (9, 11)])
+    services.submit(match, a[1], [(11, 7), (11, 8)])  # a's partner corrects again
+    assert reload(match).status == Match.Status.PENDING
+    services.submit(match, b[1], [(11, 7), (11, 8)])  # same score: final
+    match = reload(match)
+    assert match.status == Match.Status.CONFIRMED and games_of(match) == [(11, 7), (11, 8)]
+
+
+def test_either_side_can_ask_an_organizer(setup):
+    _, match, a, b = setup()
+    with pytest.raises(services.ScoreError, match="Enter the score first"):
+        services.ask_organizer(match, a[0])
+    services.submit(match, a[0], [(11, 7), (11, 9)])
+    assert services.player_view(reload(match), a[0]).can_ask, "the side that entered can ask too"
+    assert services.player_view(reload(match), b[0]).can_ask
+    services.ask_organizer(match, b[0])
     match = reload(match)
     assert match.status == Match.Status.DISPUTED
     assert set(match.submissions.values_list("status", flat=True)) == {Status.DISPUTED}
-    assert games_of(match) == []
+    assert AuditLog.objects.filter(action="organizer asked", new_value="11-7, 11-9").exists()
+    with pytest.raises(services.ScoreError, match="already been asked"):
+        services.ask_organizer(match, a[0])
+    assert not services.player_view(match, a[0]).can_ask
+
+
+def test_after_asking_an_organizer_players_can_still_agree(setup):
+    _, match, a, b = setup()
+    services.submit(match, a[0], [(11, 7), (11, 9)])
+    services.ask_organizer(match, b[0])
+    services.submit(match, b[0], [(7, 11), (9, 11)])
+    assert reload(match).status == Match.Status.DISPUTED, "a different score keeps it flagged"
+    services.submit(match, a[0], [(7, 11), (9, 11)])
+    match = reload(match)
+    assert match.status == Match.Status.CONFIRMED and match.winner == "B"
 
 
 def test_resubmitting_replaces_your_own_entry(setup):
@@ -185,6 +231,7 @@ def test_admin_can_edit_after_the_lock(setup, admin_user):
 def test_admin_settles_a_dispute_and_it_is_logged(setup, admin_user):
     event, match, a, b = setup()
     services.submit(match, a[0], [(11, 7), (11, 9)])
+    services.ask_organizer(match, b[0])
     services.submit(match, b[0], [(7, 11), (9, 11)])
     services.admin_set_score(match, [(11, 7), (11, 9)], admin_user)
     match = reload(match)
@@ -295,7 +342,7 @@ def test_player_enters_and_confirms_through_the_pages(client, setup):
 
     client.force_login(b[0].user)
     page = client.get(url)
-    assert b"Is that right?" in page.content
+    assert b"Is this score right?" in page.content
     sub = match.submissions.get()
     client.post(url, {"action": "confirm", "submission": sub.pk})
     assert reload(match).status == Match.Status.CONFIRMED
@@ -333,3 +380,83 @@ def test_admin_pages(client, setup, admin_user):
     assert log.status_code == 200 and b"Forfeit" in log.content
     schedule = client.get(reverse("scheduling:schedule", args=[event.pk]))
     assert b"Enter score" in schedule.content
+
+
+ENTRY = {"action": "enter", "g1_a": "11", "g1_b": "6", "g2_a": "11", "g2_b": "8", "g3_a": "", "g3_b": ""}
+
+
+def test_confirm_page_shows_the_score_in_team_columns(client, setup):
+    event, match, a, b = setup()
+    url = reverse("scoring:match_score", args=[match.pk])
+    client.force_login(a[0].user)
+    client.post(url, ENTRY)
+
+    client.force_login(b[0].user)
+    html = client.get(url).content.decode()
+    from html import unescape
+    table = unescape(html.split("Is this score right?")[1].split("Yes, that")[0])
+    assert match.label_a in table and match.label_b in table
+    assert table.index(">11<") < table.index(">6<") < table.index(">11<", table.index(">6<")) < table.index(">8<")
+    assert ">You<" in table
+    assert f"Winner: <strong>{match.label_a}</strong> (your opponent)" in table
+
+
+def test_player_can_correct_a_wrong_entry_from_the_confirm_page(client, setup):
+    event, match, a, b = setup()
+    url = reverse("scoring:match_score", args=[match.pk])
+    client.force_login(a[0].user)
+    client.post(url, ENTRY)
+
+    client.force_login(b[0].user)
+    html = client.get(url).content.decode()
+    fix = html.split('id="fix"')[1]
+    assert 'name="g1_a"' in fix and 'value="11"' in fix and 'value="6"' in fix, "boxes start with their score"
+
+    r = client.post(url, {**ENTRY, "g2_a": "9", "g2_b": "11", "g3_a": "8", "g3_b": "11"})
+    assert r.status_code == 302
+    assert reload(match).status == Match.Status.PENDING, "goes back to them, not the organizer"
+
+    client.force_login(a[0].user)
+    html = client.get(url).content.decode()
+    assert "Your opponent changed the score you entered." in html
+    assert "Your opponent entered this score." not in html
+    client.post(url, {"action": "confirm", "submission": match.submissions.get(status=Status.PENDING).pk})
+    assert reload(match).status == Match.Status.CONFIRMED
+
+
+def test_correcting_to_the_same_score_makes_it_final(client, setup):
+    event, match, a, b = setup()
+    url = reverse("scoring:match_score", args=[match.pk])
+    client.force_login(a[0].user)
+    client.post(url, ENTRY)
+    client.force_login(b[0].user)
+    client.post(url, ENTRY)
+    assert reload(match).status == Match.Status.CONFIRMED
+
+
+def test_a_bad_correction_keeps_the_boxes_open_with_the_error(client, setup):
+    event, match, a, b = setup()
+    url = reverse("scoring:match_score", args=[match.pk])
+    client.force_login(a[0].user)
+    client.post(url, ENTRY)
+    client.force_login(b[0].user)
+    r = client.post(url, {**ENTRY, "g1_a": "11", "g1_b": "10"})
+    html = r.content.decode()
+    assert r.status_code == 200
+    assert '<details id="fix" class="mt-6 border-t border-line pt-4" open>' in html
+    assert reload(match).status == Match.Status.PENDING
+
+
+def test_ask_an_organizer_button(client, setup):
+    event, match, a, b = setup()
+    url = reverse("scoring:match_score", args=[match.pk])
+    client.force_login(a[0].user)
+    assert b"Ask an organizer to decide" not in client.get(url).content, "nothing entered yet"
+    client.post(url, ENTRY)
+    client.force_login(b[0].user)
+    assert b"Ask an organizer to decide" in client.get(url).content
+    client.post(url, {"action": "ask"})
+    assert reload(match).status == Match.Status.DISPUTED
+    html = client.get(url).content.decode()
+    assert "An organizer has been asked to decide." in html
+    assert "Ask an organizer to decide" not in html

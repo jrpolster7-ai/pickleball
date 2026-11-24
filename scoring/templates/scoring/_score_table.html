@@ -1,0 +1,23 @@
+{% comment %}
+  A score laid out like the entry form: one column per team, one row per game.
+  Takes match, games (list of (a, b)), winner ("A" or "B"), you ("A", "B", or empty).
+{% endcomment %}
+<table class="w-full max-w-xl border-collapse">
+  <thead>
+    <tr class="text-left text-sm text-stone-500">
+      <th class="w-24 pb-2 font-semibold">Game</th>
+      <th class="pb-2 pr-3 font-semibold">{{ match.label_a }}{% if you == "A" %} <span class="chip bg-ball font-semibold text-court">You</span>{% endif %}</th>
+      <th class="pb-2 font-semibold">{{ match.label_b }}{% if you == "B" %} <span class="chip bg-ball font-semibold text-court">You</span>{% endif %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a, b in games %}
+      <tr>
+        <td class="py-1 font-semibold">{{ forloop.counter }}</td>
+        <td class="py-1 pr-3"><span class="flex h-12 w-24 items-center justify-center rounded-lg border-2 text-lg {% if a > b %}border-court bg-ball/20 font-bold text-court{% else %}border-line bg-white font-semibold{% endif %}">{{ a }}</span></td>
+        <td class="py-1"><span class="flex h-12 w-24 items-center justify-center rounded-lg border-2 text-lg {% if b > a %}border-court bg-ball/20 font-bold text-court{% else %}border-line bg-white font-semibold{% endif %}">{{ b }}</span></td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="mt-3 text-lg">Winner: <strong>{% if winner == "A" %}{{ match.label_a }}{% else %}{{ match.label_b }}{% endif %}</strong>{% if you %}{% if winner == you %} (your team){% else %} (your opponent){% endif %}{% endif %}</p>
