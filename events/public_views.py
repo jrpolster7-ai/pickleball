@@ -41,6 +41,7 @@ def nav(event, audience: str, active: str, code: str | None = None) -> list[dict
                       ("standings", "Standings", reverse("events:event_standings", args=[event.pk]))]
         if has_bracket(event):
             items.append(("bracket", "Bracket", reverse("events:event_bracket", args=[event.pk])))
+        items.append(("chat", "Chat", reverse("chat:room", args=[event.pk])))  # Never for spectators.
     return [{"key": k, "label": label, "url": url, "active": k == active} for k, label, url in items]
 
 

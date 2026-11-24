@@ -9,5 +9,6 @@ urlpatterns = [
     path("", include("scoring.urls")),
     path("", include("standings.urls")),
     path("", include("brackets.urls")),
+    path("", include("chat.urls")),
     path("", include("core.urls")),
 ]

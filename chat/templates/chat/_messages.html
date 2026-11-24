@@ -1,0 +1,48 @@
+{# The message list. HTMX asks for it again every few seconds; the server answers "no change" when nothing happened. #}
+<div id="chat-list" data-chat-list
+     hx-get="{% url 'chat:poll' event.pk %}?v={{ version }}"
+     hx-trigger="every 4s [document.visibilityState === 'visible']"
+     hx-swap="outerHTML">
+  {% if has_older %}<p class="help mb-3 text-center">Showing the latest {{ show_latest }} messages.</p>{% endif %}
+  {% if chat_messages %}
+    <ol class="space-y-3" aria-label="Messages">
+      {% for m in chat_messages %}
+        <li class="rounded-lg border p-3 {% if m.is_deleted %}border-dashed border-line bg-mist{% elif user.is_staff and m.open_reports %}border-alert bg-red-50{% elif m.mine %}border-court/30 bg-ball/10{% else %}border-line bg-white{% endif %}">
+          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span class="font-semibold text-court">{% if m.mine %}You{% else %}{{ m.author.get_full_name|default:m.author.username }}{% endif %}</span>
+            {% if m.author.is_staff %}<span class="chip">Organizer</span>{% endif %}
+            <time class="text-xs text-stone-500" datetime="{{ m.created|date:'c' }}">{% if m.created|date:"Ymd" == today %}{{ m.created|time:"g:i A" }}{% else %}{{ m.created|date:"M j, g:i A" }}{% endif %}</time>
+          </div>
+          {% if m.is_deleted %}
+            <p class="mt-1 text-sm italic text-stone-500">An organizer removed this message.</p>
+          {% else %}
+            <p class="mt-1 break-words">{{ m.body|linebreaksbr }}</p>
+            <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+              {% if user.is_staff %}
+                {% if m.open_reports %}
+                  <span class="font-semibold text-alert">Reported{% if m.open_reports > 1 %} by {{ m.open_reports }} people{% endif %}</span>
+                  <form method="post" action="{% url 'chat:keep' m.pk %}" hx-post="{% url 'chat:keep' m.pk %}" hx-target="#chat-list" hx-swap="outerHTML">
+                    {% csrf_token %}<button class="btn-secondary btn-small">It's fine, keep it</button>
+                  </form>
+                {% endif %}
+                <form method="post" action="{% url 'chat:delete' m.pk %}" hx-post="{% url 'chat:delete' m.pk %}" hx-target="#chat-list" hx-swap="outerHTML" hx-confirm="Remove this message for everyone?">
+                  {% csrf_token %}<button class="btn-danger btn-small">Remove</button>
+                </form>
+              {% elif not m.mine %}
+                {% if m.i_reported %}
+                  <span class="text-stone-500">You reported this. Thanks.</span>
+                {% else %}
+                  <form method="post" action="{% url 'chat:report' m.pk %}" hx-post="{% url 'chat:report' m.pk %}" hx-target="#chat-list" hx-swap="outerHTML" hx-confirm="Report this message to the organizers?">
+                    {% csrf_token %}<button class="link cursor-pointer text-stone-500">Report</button>
+                  </form>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="py-10 text-center text-stone-500">No messages yet. Say hello! 👋</p>
+  {% endif %}
+</div>

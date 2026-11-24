@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import Player
 from accounts.services import player_for
+from chat import services as chat_services
 from core.codes import normalize
 from core.decorators import admin_required
 
@@ -115,6 +116,7 @@ def manage_event(request, pk):
         "full_rr": rules.full_round_robin(event.team_count or 0),
         "per_team_low": per_team_low,
         "per_team_high": per_team_high,
+        "chat_reports": chat_services.open_report_count(event),
     })
 
 

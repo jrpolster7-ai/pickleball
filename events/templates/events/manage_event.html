@@ -132,6 +132,17 @@
 
     {# --- Side column --- #}
     <aside class="space-y-6">
+      <section class="card {% if chat_reports %}border-alert{% endif %}">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2>Chat</h2>
+          <a href="{% url 'chat:room' event.pk %}" class="btn-secondary btn-small">Open chat</a>
+        </div>
+        {% if chat_reports %}
+          <p class="mt-2 font-semibold text-alert">{{ chat_reports }} reported message{{ chat_reports|pluralize }} to look at.</p>
+        {% else %}
+          <p class="help">Players in this event can talk here. Nothing is reported.</p>
+        {% endif %}
+      </section>
       {% include "events/_code_card.html" with kind="player" label="Player code" code=event.player_code enabled=event.player_code_enabled url=player_url about="Players use this to join." %}
       {% include "events/_code_card.html" with kind="spectator" label="Spectator code" code=event.spectator_code enabled=event.spectator_code_enabled url=spectator_url about="Anyone can follow results. No account needed." %}
 
