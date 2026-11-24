@@ -18,6 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 A, B = "A", "B"
+WINNERS, LOSERS, FINAL = "WINNERS", "LOSERS", "FINAL"
+SIDE_ORDER = {WINNERS: 0, LOSERS: 1, FINAL: 2}
 
 
 class BracketError(ValueError):
@@ -55,6 +57,8 @@ class BracketMatch:
     third_place: bool = False
     winner_to: tuple[int, str] | None = None  # (match key, "A" or "B")
     loser_to: tuple[int, str] | None = None
+    side: str = WINNERS  # WINNERS, LOSERS, or FINAL (double elimination's grand final)
+    wave: int = 0        # time order: a match can start once its feeding matches are done
 
 
 @dataclass
@@ -63,16 +67,29 @@ class Bracket:
     size: int  # main bracket size, a power of 2
     play_in: bool
     matches: list[BracketMatch] = field(default_factory=list)
+    double: bool = False
 
     def by_key(self) -> dict[int, BracketMatch]:
         return {m.key: m for m in self.matches}
 
     def rounds(self) -> list[tuple[str, list[BracketMatch]]]:
-        """(name, matches) in play order. Third place comes last."""
+        """(name, matches) in play order: winners, then losers, then the grand final. Third place last."""
         out: dict[tuple, list] = {}
         for m in self.matches:
-            out.setdefault((m.round, m.third_place, m.label), []).append(m)
-        return [(label, ms) for (_, _, label), ms in sorted(out.items(), key=lambda kv: (kv[0][0], kv[0][1]))]
+            out.setdefault((SIDE_ORDER[m.side], m.round, m.third_place, m.label), []).append(m)
+        return [(key[3], ms) for key, ms in sorted(out.items(), key=lambda kv: kv[0][:3])]
+
+    def sections(self) -> list[tuple[str, list[tuple[str, list[BracketMatch]]]]]:
+        """[(section name, rounds)]. Single elimination is one unnamed section."""
+        if not self.double:
+            return [("", self.rounds())]
+        names = {WINNERS: "Winners bracket", LOSERS: "Losers bracket", FINAL: "Grand final"}
+        out = []
+        for side in (WINNERS, LOSERS, FINAL):
+            rounds = [(label, ms) for label, ms in self.rounds() if ms[0].side == side]
+            if rounds:
+                out.append((names[side], rounds))
+        return out
 
 
 def is_power_of_two(n: int) -> bool:
@@ -152,7 +169,13 @@ def single_elimination(n: int, *, play_in: bool, third_place: bool) -> Bracket:
                              b=Feed.loser(semis[1].key), label="Third place", third_place=True)
         bracket.matches.append(third)
 
-    # Link each match to where its winner (and, for semis, loser) goes.
+    _link(bracket)
+    _assign_waves(bracket)
+    return bracket
+
+
+def _link(bracket: Bracket) -> None:
+    """Point each match at where its winner (and loser, if they play on) goes next."""
     by_key = bracket.by_key()
     for m in bracket.matches:
         for side, feed in ((A, m.a), (B, m.b)):
@@ -160,7 +183,137 @@ def single_elimination(n: int, *, play_in: bool, third_place: bool) -> Bracket:
                 by_key[feed.value].winner_to = (m.key, side)
             elif feed.kind == "loser":
                 by_key[feed.value].loser_to = (m.key, side)
+
+
+def _assign_waves(bracket: Bracket) -> None:
+    """Time order for scheduling. Rounds in the same wave can share a time slot.
+
+    A whole round plays together: it comes after every match feeding it, and
+    after the round before it on the same side of the bracket.
+    """
+    by_key = bracket.by_key()
+    groups: dict[tuple, list[BracketMatch]] = {}
+    for m in bracket.matches:  # matches are listed after everything that feeds them
+        groups.setdefault((m.side, m.round), []).append(m)
+    last_on_side: dict[str, int] = {}
+    for (side, _), ms in groups.items():
+        wave = last_on_side.get(side, 0) + 1
+        for m in ms:
+            feeders = [by_key[f.value].wave for f in (m.a, m.b) if f.kind in ("winner", "loser")]
+            wave = max(wave, 1 + max(feeders, default=0))
+        for m in ms:
+            m.wave = wave
+        last_on_side[side] = wave
+
+
+# --- Double elimination -----------------------------------------------------
+
+BYE = Feed("bye", 0)
+
+
+def double_elimination(n: int, *, play_in: bool) -> Bracket:
+    """Winners and losers brackets, then a grand final (section 9).
+
+    Everyone is out after two losses. When n isn't a power of 2, the bracket
+    is sized up to the next power of 2 and the top seeds get byes. Opening
+    round losers drop into the losers bracket like anyone else (DECIDED with
+    Joe). Matches against a bye are folded away, so only real matches remain.
+
+    The grand final reset (ASSUMED) isn't listed here. It's only played if
+    the losers bracket winner wins the grand final, so the database adds it
+    when that happens.
+    """
+    if n < 2:
+        raise BracketError("A bracket needs at least 2 teams.")
+    size = n if is_power_of_two(n) else 2 * main_size(n)
+    levels = size.bit_length() - 1
+    raw: list[BracketMatch] = []
+    keys = iter(range(1, 10**6))
+
+    def new(side, rnd, a, b):
+        m = BracketMatch(key=next(keys), round=rnd, position=0, a=a, b=b, label="", side=side)
+        raw.append(m)
+        return m
+
+    def pair_up(side, rnd, feeds):
+        made = [new(side, rnd, feeds[2 * i], feeds[2 * i + 1]) for i in range(len(feeds) // 2)]
+        return made, [Feed.winner(m.key) for m in made]
+
+    # Winners bracket: the usual seeded bracket, byes for seeds that don't exist.
+    current = [Feed.seed(s) if s <= n else BYE for s in seed_positions(size)]
+    winners_rounds = []
+    for r in range(1, levels + 1):
+        made, current = pair_up(WINNERS, r, current)
+        winners_rounds.append(made)
+    winners_champion = current[0]
+
+    # Losers bracket: first-round losers play each other, then each later
+    # winners round drops its losers in. Drops cross over every other round
+    # so teams don't meet again right away.
+    lb_round = 0
+    drops = [Feed.loser(m.key) for m in winners_rounds[0]]
+    if len(drops) >= 2:
+        lb_round += 1
+        _, survivors = pair_up(LOSERS, lb_round, drops)
+    else:
+        survivors = drops
+    for r in range(2, levels + 1):
+        drops = [Feed.loser(m.key) for m in winners_rounds[r - 1]]
+        if r % 2 == 0:
+            drops.reverse()
+        lb_round += 1
+        made = [new(LOSERS, lb_round, survivors[i], drops[i]) for i in range(len(drops))]
+        survivors = [Feed.winner(m.key) for m in made]
+        if len(survivors) > 1:
+            lb_round += 1
+            _, survivors = pair_up(LOSERS, lb_round, survivors)
+    grand_final = new(FINAL, 1, winners_champion, survivors[0])
+
+    # Fold away matches against a bye: the real team moves straight on.
+    replace: dict[tuple[str, int], Feed] = {}
+
+    def resolve(feed: Feed) -> Feed:
+        while (feed.kind, feed.value) in replace:
+            feed = replace[(feed.kind, feed.value)]
+        return feed
+
+    kept = []
+    for m in raw:
+        m.a, m.b = resolve(m.a), resolve(m.b)
+        if BYE in (m.a, m.b):
+            replace[("winner", m.key)] = m.b if m.a == BYE else m.a
+            replace[("loser", m.key)] = BYE
+            continue
+        kept.append(m)
+
+    bracket = Bracket(team_count=n, size=main_size(n), play_in=play_in, matches=kept, double=True)
+    _name_double_rounds(bracket, opening=size != n)
+    _link(bracket)
+    _assign_waves(bracket)
+    grand_final.label = "Grand final"
     return bracket
+
+
+def _name_double_rounds(bracket: Bracket, *, opening: bool) -> None:
+    """Renumber rounds and positions after byes are folded away, and name them."""
+    for side in (WINNERS, LOSERS, FINAL):
+        rounds = sorted({m.round for m in bracket.matches if m.side == side})
+        for number, old in enumerate(rounds, start=1):
+            ms = [m for m in bracket.matches if m.side == side and m.round == old]
+            for position, m in enumerate(ms, start=1):
+                m.round = number
+                m.position = position
+                if side == FINAL:
+                    m.label = "Grand final"
+                elif number == len(rounds):
+                    m.label = "Winners final" if side == WINNERS else "Losers final"
+                elif side == LOSERS:
+                    m.label = f"Losers round {number}"
+                elif opening and number == 1:
+                    m.label = "Play-in" if bracket.play_in else "Winners round 1"
+                else:
+                    shown = number - 1 if opening and bracket.play_in else number
+                    m.label = f"Winners round {shown}"
 
 
 def feed_label(feed: Feed, bracket: Bracket) -> str:
@@ -170,6 +323,8 @@ def feed_label(feed: Feed, bracket: Bracket) -> str:
     m = bracket.by_key()[feed.value]
     name = {"Semifinals": "Semifinal", "Quarterfinals": "Quarterfinal"}.get(m.label, m.label)
     word = "Winner" if feed.kind == "winner" else "Loser"
-    if name.startswith("Round"):
+    if "round" in name.lower():
         return f"{word} of {name}, match {m.position}"
+    if name.endswith("final") and name != "Semifinal" and name != "Quarterfinal":
+        return f"{word} of the {name.lower()}"
     return f"{word} of {name} {m.position}"

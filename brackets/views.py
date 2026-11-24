@@ -7,11 +7,11 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from core.decorators import admin_required
-from events.models import BracketSizing, Event
+from events.models import Event
 from standings import services as standings_services
 
 from . import services
-from .brackets import BracketError, Feed, feed_label, single_elimination
+from .brackets import BracketError, Feed, feed_label
 from .forms import AdvanceForm
 
 
@@ -36,8 +36,7 @@ def _event(pk):
 
 def _preview(event, count, seeding):
     """The bracket this count would make, with team names in the seeded spots."""
-    plan = single_elimination(count, play_in=event.bracket_sizing == BracketSizing.PLAY_IN,
-                              third_place=event.third_place_match)
+    plan = services.plan_for(event, count)
     names = {i + 1: row.extra["label"] for i, row in enumerate(seeding.order[:count])}
 
     def label(feed: Feed):
@@ -46,8 +45,9 @@ def _preview(event, count, seeding):
     def seed(feed: Feed):
         return feed.value if feed.kind == "seed" else None
 
-    return [(name, [PreviewMatch(label(m.a), label(m.b), seed(m.a), seed(m.b)) for m in ms])
-            for name, ms in plan.rounds()]
+    return [(section, [(name, [PreviewMatch(label(m.a), label(m.b), seed(m.a), seed(m.b)) for m in ms])
+                       for name, ms in rounds])
+            for section, rounds in plan.sections()]
 
 
 @admin_required
@@ -56,13 +56,15 @@ def bracket(request, pk):
     if event.is_scramble:
         return render(request, "brackets/bracket.html", {"event": event, "scramble": True})
 
-    rounds = services.bracket_rounds(event)
-    if rounds:
+    sections = services.bracket_sections(event)
+    if sections:
+        matches = [m for _, rounds in sections for _, ms in rounds for m in ms]
         return render(request, "brackets/bracket.html", {
             "event": event,
-            "rounds": rounds,
+            "sections": sections,
             "champion": services.champion(event),
-            "can_delete": not any(m.status != "SCHEDULED" for _, ms in rounds for m in ms),
+            "third": services.third_place(event),
+            "can_delete": not any(m.status != "SCHEDULED" for m in matches),
         })
 
     table = standings_services.table(event)

@@ -224,6 +224,7 @@ Scramble standings are per player.
   - ASSUMED. In single elimination with the toggle on, the two semifinal losers play for third.
   - ASSUMED. In double elimination, third place is the loser of the losers bracket final. No separate match, so the toggle has no effect there.
 - Double elimination uses winners and losers brackets. The grand final resets if the losers bracket winner wins the first final (ASSUMED).
+- DECIDED. In double elimination, a team that loses an opening (play-in or round 1) match drops to the losers bracket like anyone else. Everyone is out after two losses.
 - Bracket matches use the same score entry and lock rules.
 - Build single elimination first. Double elimination is its own phase.
 

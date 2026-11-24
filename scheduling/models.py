@@ -61,7 +61,8 @@ class Match(models.Model):
     bracket_round = models.PositiveSmallIntegerField(null=True, blank=True)
     bracket_slot = models.PositiveSmallIntegerField(null=True, blank=True)
     bracket_side = models.CharField(
-        max_length=8, blank=True, choices=[("WINNERS", "Winners"), ("LOSERS", "Losers")]
+        max_length=8, blank=True,
+        choices=[("WINNERS", "Winners"), ("LOSERS", "Losers"), ("FINAL", "Grand final")],
     )
     bracket_label = models.CharField(max_length=40, blank=True)
     third_place = models.BooleanField(default=False)

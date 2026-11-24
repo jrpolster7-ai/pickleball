@@ -156,13 +156,6 @@ def test_build_on_another_day(league, admin_user):
     assert first.round.session.week == 2
 
 
-def test_double_elimination_waits_for_phase_5(league, admin_user):
-    event = league(4, bracket_type=BracketType.DOUBLE)
-    play_round_robin(event, admin_user)
-    with pytest.raises(BracketError, match="Double elimination"):
-        services.build(event, 4, admin_user)
-
-
 def test_advancing_count_must_fit(league, admin_user):
     event = league(4)
     play_round_robin(event, admin_user)

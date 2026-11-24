@@ -11,6 +11,12 @@ from events.models import Division, Event, Level
 _seq = itertools.count(1)
 
 
+@pytest.fixture(autouse=True)
+def fast_password_hashing(settings):
+    """Tests make lots of accounts. The real hasher is slow on purpose; tests don't need that."""
+    settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+
 @pytest.fixture
 def make_user(db):
     def _make(username=None, *, gender=Gender.MALE, staff=False, password="pickle-pass-123", **kw):

@@ -13,14 +13,28 @@
   {% if scramble %}
     <div class="card mt-6 max-w-2xl"><p>Scramble events don't have a bracket. The top player in the <a class="link" href="{% url 'standings:standings' event.pk %}">standings</a> wins.</p></div>
 
-  {% elif rounds %}
+  {% elif sections %}
     {% if champion %}
-      <div class="mt-6 rounded-xl border-2 border-ball-dark bg-ball/30 px-5 py-4">
-        <p class="text-sm font-semibold uppercase tracking-wide text-court">Champions 🏆</p>
-        <p class="text-2xl font-bold text-court">{{ champion.name }}</p>
+      <div class="mt-6 flex flex-wrap gap-4">
+        <div class="rounded-xl border-2 border-ball-dark bg-ball/30 px-5 py-4">
+          <p class="text-sm font-semibold uppercase tracking-wide text-court">Champions 🏆</p>
+          <p class="text-2xl font-bold text-court">{{ champion.name }}</p>
+        </div>
+        {% if third %}
+          <div class="rounded-xl border border-line bg-white px-5 py-4">
+            <p class="text-sm font-semibold uppercase tracking-wide text-stone-500">Third place</p>
+            <p class="text-xl font-bold text-court">{{ third.name }}</p>
+          </div>
+        {% endif %}
       </div>
     {% endif %}
-    <div class="mt-6">{% include "brackets/_bracket.html" with live=True %}</div>
+    {% for section, rounds in sections %}
+      <div class="mt-6">
+        {% if section %}<h2 class="mb-3">{{ section }}</h2>{% endif %}
+        {% include "brackets/_bracket.html" with live=True %}
+      </div>
+    {% endfor %}
+    {% if event.bracket_type == "DOUBLE" %}<p class="help">Lose twice and you're out. If the losers bracket winner wins the grand final, a reset match decides it. Third place is the team that loses the losers final.</p>{% endif %}
     <p class="help">Click a match to enter or fix its score. Winners move on by themselves.</p>
     {% if can_delete %}
       <form method="post" action="{% url 'brackets:delete' event.pk %}" class="mt-6" onsubmit="return confirm('Remove the bracket? You can build a new one.')">
@@ -81,7 +95,13 @@
               {% if event.bracket_sizing == "PLAY_IN" %}When the number of teams isn't 2, 4, 8, 16, and so on, the teams closest to the cut play in for the last spots: the last team in plays the first team out.
               {% else %}When the number of teams isn't 2, 4, 8, 16, and so on, the top seeds get a bye and skip round 1.{% endif %}
             </p>
-            <div class="mt-4">{% include "brackets/_bracket.html" with rounds=preview live=False %}</div>
+            {% if event.bracket_type == "DOUBLE" %}<p class="help">Double elimination: lose twice and you're out. Teams that lose an opening match drop to the losers bracket too.</p>{% endif %}
+            {% for section, rounds in preview %}
+              <div class="mt-4">
+                {% if section %}<h3 class="mb-2 font-bold text-court">{{ section }}</h3>{% endif %}
+                {% include "brackets/_bracket.html" with live=False %}
+              </div>
+            {% endfor %}
           </section>
         {% endif %}
       </div>
