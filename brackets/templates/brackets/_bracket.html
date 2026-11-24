@@ -1,6 +1,8 @@
-{# Bracket columns, one per round, left to right. Takes rounds = [(name, cells)].
+{% comment %}
+  Bracket columns, one per round, left to right. Takes rounds = [(name, cells)].
    A cell has label_a, label_b, seed_a, seed_b, winner, footer, link, mine, alert
-   (see brackets/display.py Cell and the preview in brackets/views.py). #}
+   (see brackets/display.py Cell and the preview in brackets/views.py).
+{% endcomment %}
 <div class="overflow-x-auto pb-2">
   <div class="flex min-w-max items-stretch gap-4">
     {% for name, cells in rounds %}

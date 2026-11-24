@@ -1,6 +1,8 @@
-{# The round viewer (section 10). Takes panels, current, audience, event.
+{% comment %}
+  The round viewer (section 10). Takes panels, current, audience, event.
    Tabs are plain links (?round=N), so it works without JavaScript.
-   round-viewer.js adds instant switching, arrow keys, and swiping. #}
+   round-viewer.js adds instant switching, arrow keys, and swiping.
+{% endcomment %}
 {% load static %}
 {% if panels %}
 <div class="round-viewer" data-round-viewer>

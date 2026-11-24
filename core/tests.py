@@ -144,3 +144,19 @@ def test_skip_link_and_favicon(client):
     html = client.get("/").content.decode()
     assert 'href="#main"' in html and 'id="main"' in html
     assert "favicon.svg" in html
+
+
+def test_no_template_comment_spans_lines():
+    """Django's {# #} comments are one line only. A longer one shows up on the page as text."""
+    import re
+
+    root = Path(settings.BASE_DIR)
+    bad = []
+    for path in root.rglob("*.html"):
+        if any(part in {"pvenv", "staticfiles", "node_modules"} for part in path.parts):
+            continue
+        text = path.read_text(encoding="utf-8")
+        for m in re.finditer(r"\{#.*?#\}|\{#", text, re.S):
+            if "\n" in m.group(0) or m.group(0) == "{#":
+                bad.append(f"{path.relative_to(root)}:{text[:m.start()].count(chr(10)) + 1}")
+    assert not bad, "Use {% comment %} for multi-line comments: " + ", ".join(bad)
