@@ -104,12 +104,18 @@ def manage_event(request, pk):
     if event.team_count and event.total_matches:
         per_team_low, per_team_high = rules.per_team_range(event.team_count, event.total_matches)
 
+    # The move form is drawn once per player row. Load its event list once, not once per row.
+    move_form = MovePlayerForm(event=event)
+    to_event = move_form.fields["to_event"]
+    to_event.choices = list(to_event.choices)
+
     return render(request, "events/manage_event.html", {
         "event": event,
         "registrations": regs,
         "sides": sides,
         "add_form": AdminAddPlayerForm(event=event),
-        "move_form": MovePlayerForm(event=event),
+        "move_form": move_form,
+        "can_move": len(to_event.choices) > 1,  # More than the blank "pick one" choice.
         "team_form": BuildTeamForm(event=event),
         "player_url": request.build_absolute_uri(reverse("events:join_code", args=[event.player_code])),
         "spectator_url": request.build_absolute_uri(reverse("events:join_code", args=[event.spectator_code])),

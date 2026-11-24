@@ -323,7 +323,7 @@ Later phase, natural language creation.
 - Time zone is `America/Chicago` with `USE_TZ = True`.
 
 ### Hosting
-- OPEN. Hosting is decided later.
+- DECIDED. Render, using `render.yaml` (web service plus PostgreSQL). Chosen in Phase 8.
 - Build portable. Read all configuration from environment variables so it can move to a managed host such as Render or Railway.
 - The site must be public on the internet because out-of-town spectators will use it.
 - No email service is needed, since login does not use email.
@@ -392,7 +392,7 @@ Section 12. Anthropic API with a confirm-before-create preview. API key in an en
 ---
 
 ## 18. Open items for Joe
-1. Hosting. Pick a host before launch.
+1. ~~Hosting. Pick a host before launch.~~ Decided in Phase 8: Render, see section 15.
 2. ~~Play-in match structure for non power of 2 brackets.~~ Decided in Phase 4, see section 9.
 3. Forfeit scoring in standings. Default is an 11 to 0 win per game, configurable.
 4. Confirm with Mrs. Carter that spectators seeing scores after each confirmed round is close enough to "not live."

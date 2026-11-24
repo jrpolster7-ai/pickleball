@@ -284,3 +284,14 @@ class TestJoin:
         client.post(reverse("events:team_action", args=[e.pk, "invite"]), {"username": "partner"})
         html = client.get(reverse("events:event_detail", args=[e.pk])).content.decode()
         assert "Waiting on" in html
+
+
+def test_manage_page_query_count_does_not_grow_with_players(client, admin_user, make_event, make_user,
+                                                            django_assert_max_num_queries):
+    e = make_event(max_participants=100)
+    make_event(title="Another event")  # So every row gets a Move form.
+    for _ in range(40):
+        registration.admin_add(e, make_user().player, override=True)
+    client.force_login(admin_user)
+    with django_assert_max_num_queries(20):
+        assert client.get(reverse("events:manage_event", args=[e.pk])).status_code == 200

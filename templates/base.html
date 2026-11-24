@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0F5C4D">
   <title>{% block title %}Pickleball{% endblock %}</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   {% block head %}{% endblock %}
 </head>
 <body class="flex min-h-screen flex-col bg-mist text-ink antialiased" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <a href="#main" class="sr-only rounded-lg bg-ball px-4 py-2 font-semibold text-court focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50">Skip to main content</a>
   <header class="bg-court text-white">
     <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-1 px-6 py-3 max-sm:px-4">
       <a href="{% url 'core:home' %}" class="flex min-h-10 items-center gap-3 no-underline">
@@ -42,7 +44,7 @@
     </div>
   {% endif %}
 
-  <main class="mx-auto w-full max-w-6xl flex-1 px-6 py-8 max-sm:px-4 max-sm:py-6">
+  <main id="main" tabindex="-1" class="mx-auto outline-none w-full max-w-6xl flex-1 px-6 py-8 max-sm:px-4 max-sm:py-6">
     {% block content %}{% endblock %}
   </main>
 </body>

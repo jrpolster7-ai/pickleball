@@ -55,7 +55,7 @@
                 {% if not event.is_scramble %}<td class="max-md:hidden">{% if reg.team %}{{ reg.team.name }}{% else %}<span class="text-stone-500">No partner yet</span>{% endif %}</td>{% endif %}
                 <td class="text-right">
                   <div class="flex flex-wrap justify-end gap-2">
-                    {% if move_form.fields.to_event.queryset.exists %}
+                    {% if can_move %}
                       <details class="relative">
                         <summary class="btn-secondary btn-small list-none">Move</summary>
                         <form method="post" action="{% url 'events:admin_move_player' event.pk reg.player.pk %}" class="card absolute right-0 z-10 mt-2 w-72 space-y-3 text-left shadow-lg">

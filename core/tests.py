@@ -1,8 +1,11 @@
 """Phase 0 smoke tests: settings, config parsing, and the base template."""
 
+import os
 from pathlib import Path
 
 import pytest
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -77,3 +80,67 @@ def test_home_page_renders_with_base_template(client):
     assert "css/app.css" in html
     assert "js/htmx.min.js" in html
     assert "logo-slot" in html
+
+
+# --- Phase 8: load check, first admin, error pages --------------------------
+
+
+
+@pytest.mark.django_db
+def test_load_check_runs_a_small_event_and_cleans_up():
+    from io import StringIO
+
+    from accounts.models import User
+    from events.models import Event
+
+    out = StringIO()
+    call_command("load_check", players=24, stdout=out)
+    text = out.getvalue()
+    assert "Every page stayed under" in text, text
+    assert Event.objects.filter(title__startswith="Load check").count() == 2
+    assert Event.objects.get(title="Load check Mixed doubles").status == Event.Status.COMPLETE
+    call_command("load_check", clean=True, stdout=StringIO())
+    assert not Event.objects.filter(title__startswith="Load check").exists()
+    assert not User.objects.filter(username__startswith="loadcheck-").exists()
+
+
+@pytest.mark.django_db
+def test_ensure_admin(monkeypatch):
+    from io import StringIO
+
+    from accounts.models import User
+
+    monkeypatch.delenv("DJANGO_ADMIN_USERNAME", raising=False)
+    call_command("ensure_admin", stdout=StringIO())
+    assert not User.objects.exists()
+
+    monkeypatch.setenv("DJANGO_ADMIN_USERNAME", "rachel")
+    monkeypatch.setenv("DJANGO_ADMIN_PASSWORD", "short")
+    with pytest.raises(CommandError, match="too weak"):
+        call_command("ensure_admin", stdout=StringIO())
+
+    monkeypatch.setenv("DJANGO_ADMIN_PASSWORD", "serve-and-volley-2027")
+    call_command("ensure_admin", stdout=StringIO())
+    admin = User.objects.get(username="rachel")
+    assert admin.is_staff and admin.check_password("serve-and-volley-2027")
+    assert admin.player
+
+    monkeypatch.setenv("DJANGO_ADMIN_PASSWORD", "a-different-password-99")
+    call_command("ensure_admin", stdout=StringIO())
+    admin.refresh_from_db()
+    assert admin.check_password("serve-and-volley-2027"), "never changes an existing admin"
+    assert os.environ["DJANGO_ADMIN_USERNAME"] == "rachel"
+
+
+@pytest.mark.django_db
+def test_friendly_404(client):
+    response = client.get("/no-such-page/")
+    assert response.status_code == 404
+    assert b"We couldn't find that page." in response.content
+
+
+@pytest.mark.django_db
+def test_skip_link_and_favicon(client):
+    html = client.get("/").content.decode()
+    assert 'href="#main"' in html and 'id="main"' in html
+    assert "favicon.svg" in html
