@@ -79,7 +79,7 @@ def _check_games(match: Match, games) -> list[rules.Game]:
 
 
 def _lock(match: Match) -> Match:
-    return Match.objects.select_for_update().select_related("event", "side_a", "side_b", "round").get(pk=match.pk)
+    return Match.objects.select_for_update(of=("self",)).select_related("event", "side_a", "side_b", "round").get(pk=match.pk)
 
 
 def _final_text(match: Match) -> str:

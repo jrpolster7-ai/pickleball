@@ -150,6 +150,23 @@ STORAGES = {
 }
 
 
+# A friendly page instead of Django's "CSRF verification failed".
+CSRF_FAILURE_VIEW = "core.views.csrf_failure"
+
+
+# --- Logging ----------------------------------------------------------------
+# Warnings and errors go to the console, which Render shows under Logs.
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
+    # Replaces Django's default, which prints nothing when debug is off.
+    "loggers": {"django": {"handlers": ["console"], "level": "WARNING", "propagate": False}},
+}
+
+
 # --- Security for production ----------------------------------------------
 
 if not DEBUG:

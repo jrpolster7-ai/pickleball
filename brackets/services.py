@@ -89,7 +89,7 @@ def _schedule_start(event: Event, date: datetime.date | None, start: datetime.ti
 @transaction.atomic
 def build(event: Event, count: int, actor=None, *, date=None, start=None) -> list[Match]:
     """Seed the top `count` teams into a bracket and schedule it after the round robin."""
-    event = Event.objects.select_for_update().select_related("division", "level").get(pk=event.pk)
+    event = Event.objects.select_for_update(of=("self",)).select_related("division", "level").get(pk=event.pk)
     table = standings_services.table(event)
     problem = build_problem(event, count, table)
     if problem:
@@ -145,7 +145,7 @@ def build(event: Event, count: int, actor=None, *, date=None, start=None) -> lis
 @transaction.atomic
 def delete(event: Event, actor=None) -> None:
     """Take the bracket down, only while no bracket match has a score."""
-    event = Event.objects.select_for_update().get(pk=event.pk)
+    event = Event.objects.select_for_update(of=("self",)).get(pk=event.pk)
     matches = event.matches.filter(stage=Match.Stage.BRACKET)
     if not matches.exists():
         raise BracketError("There's no bracket to remove.")
@@ -168,7 +168,7 @@ def delete(event: Event, actor=None) -> None:
 def _place(target: Match | None, letter: str, side_id: int | None) -> None:
     if target is None:
         return
-    target = Match.objects.select_for_update().get(pk=target.pk)
+    target = Match.objects.select_for_update(of=("self",)).get(pk=target.pk)
     field = f"side_{letter.lower()}_id"
     if getattr(target, field) == side_id:
         return

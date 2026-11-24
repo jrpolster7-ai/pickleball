@@ -160,3 +160,31 @@ def test_no_template_comment_spans_lines():
             if "\n" in m.group(0) or m.group(0) == "{#":
                 bad.append(f"{path.relative_to(root)}:{text[:m.start()].count(chr(10)) + 1}")
     assert not bad, "Use {% comment %} for multi-line comments: " + ", ".join(bad)
+
+
+def test_row_locks_only_lock_their_own_table():
+    """PostgreSQL refuses FOR UPDATE across a LEFT JOIN (nullable foreign keys like a bracket
+    match's empty side). SQLite ignores locks, so tests can't catch it. Always pass of=("self",)."""
+    import subprocess
+
+    root = Path(settings.BASE_DIR)
+    files = subprocess.run(["git", "ls-files", "*.py"], cwd=root, capture_output=True, text=True).stdout.split()
+    code = [f for f in files if "test" not in Path(f).name and f != "conftest.py"]
+    bad = [f for f in code if ".select_for_update()" in (root / f).read_text(encoding="utf-8")]
+    assert not bad, f"Use select_for_update(of=(\"self\",)) in: {bad}"
+
+
+def test_score_lock_sql_is_valid_for_postgresql():
+    from django.db.backends.postgresql.base import DatabaseWrapper
+
+    from scheduling.models import Match
+
+    pg = DatabaseWrapper({
+        "ENGINE": "django.db.backends.postgresql", "NAME": "x", "USER": "", "PASSWORD": "", "HOST": "", "PORT": "",
+        "OPTIONS": {}, "TIME_ZONE": None, "CONN_MAX_AGE": 0, "CONN_HEALTH_CHECKS": False, "AUTOCOMMIT": True,
+        "ATOMIC_REQUESTS": False, "TEST": {},
+    })
+    pg.get_autocommit = lambda: False  # Pretend we're inside a transaction; nothing connects.
+    qs = Match.objects.select_for_update(of=("self",)).select_related("event", "side_a", "side_b", "round")
+    sql = qs.filter(pk=1).query.get_compiler(connection=pg).as_sql()[0]
+    assert sql.endswith('FOR UPDATE OF "scheduling_match"')

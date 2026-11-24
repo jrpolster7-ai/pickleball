@@ -47,7 +47,7 @@ def add_player(*, first_name: str, last_name: str, gender: str, created_by) -> P
 @transaction.atomic
 def claim_player(player: Player, *, username: str, password: str):
     """Turn an admin-added Player into a real account."""
-    player = Player.objects.select_for_update().get(pk=player.pk)
+    player = Player.objects.select_for_update(of=("self",)).get(pk=player.pk)
     if player.is_claimed:
         raise ValueError("This profile has already been claimed.")
     user = get_user_model().objects.create_user(
@@ -78,8 +78,8 @@ def merge_players(*, keep: Player, remove: Player) -> Player:
 
     if keep.pk == remove.pk:
         raise MergeError("Pick two different profiles.")
-    keep = Player.objects.select_for_update().get(pk=keep.pk)
-    remove = Player.objects.select_for_update().get(pk=remove.pk)
+    keep = Player.objects.select_for_update(of=("self",)).get(pk=keep.pk)
+    remove = Player.objects.select_for_update(of=("self",)).get(pk=remove.pk)
     if keep.user_id and remove.user_id:
         raise MergeError("Both profiles have their own login, so they can't be merged.")
 
@@ -140,7 +140,7 @@ def make_admin(user) -> None:
 @transaction.atomic
 def remove_admin(user) -> None:
     """Any admin can remove another. The last admin can never be removed."""
-    current = list(admins().select_for_update())
+    current = list(admins().select_for_update(of=("self",)))
     if user.pk in {u.pk for u in current} and len(current) <= 1:
         raise LastAdminError("You can't remove the last admin.")
     user.is_staff = False

@@ -204,7 +204,7 @@ def _check_can_change(event: Event) -> None:
 @transaction.atomic
 def publish(event: Event, seed: int, actor=None) -> Preview:
     """Save the previewed schedule. The same seed gives exactly what the admin saw."""
-    event = Event.objects.select_for_update().select_related("division", "level").get(pk=event.pk)
+    event = Event.objects.select_for_update(of=("self",)).select_related("division", "level").get(pk=event.pk)
     _check_can_change(event)
     if event.has_schedule:
         raise ScheduleError("This event already has a schedule. Clear it first to make a new one.")
@@ -277,7 +277,7 @@ def _make_scramble_sides(event, match_rows, lineups) -> None:
 @transaction.atomic
 def clear(event: Event, actor=None) -> None:
     """Throw away the schedule so a new one can be made. Teams and players stay."""
-    event = Event.objects.select_for_update().select_related("division").get(pk=event.pk)
+    event = Event.objects.select_for_update(of=("self",)).select_related("division").get(pk=event.pk)
     _check_can_change(event)
     count = event.matches.count()
     event.matches.all().delete()

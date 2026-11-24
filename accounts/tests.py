@@ -251,3 +251,53 @@ class TestPasswordReset:
         assert response.status_code == 403
         victim.refresh_from_db()
         assert not victim.check_password("brand-new-pass-77")
+
+
+# --- Out-of-date forms (CSRF) ------------------------------------------------
+
+def _token(response):
+    import re
+    return re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', response.content.decode()).group(1)
+
+
+@pytest.mark.django_db
+class TestOutOfDateForms:
+    """Signing in gives the browser a new security code. Older pages then fail politely."""
+
+    def signup(self, c):
+        page = c.get(reverse("accounts:signup"))
+        return c.post(reverse("accounts:signup"), {
+            "csrfmiddlewaretoken": _token(page), "username": "newbie", "first_name": "New", "last_name": "Player",
+            "gender": "F", "password1": "court-time-2027", "password2": "court-time-2027",
+        })
+
+    def test_old_sign_in_tab_after_signing_up_goes_home(self):
+        from django.test import Client
+
+        c = Client(enforce_csrf_checks=True)
+        old_login = c.get(reverse("accounts:login"))
+        assert self.signup(c).status_code == 302
+        response = c.post(reverse("accounts:login"), {
+            "csrfmiddlewaretoken": _token(old_login), "username": "newbie", "password": "court-time-2027",
+        }, follow=True)
+        assert response.redirect_chain[-1][0] == reverse("core:home")
+        assert "already signed in as newbie" in response.content.decode()
+
+    def test_other_old_forms_show_a_friendly_page(self, make_user):
+        from django.test import Client
+
+        c = Client(enforce_csrf_checks=True)
+        c.force_login(make_user())
+        response = c.post(reverse("events:join_enter"), {"csrfmiddlewaretoken": "stale", "code": "ABC123"})
+        html = response.content.decode()
+        assert response.status_code == 403
+        assert "That page was out of date." in html and "Nothing was saved." in html
+        assert "CSRF verification failed" not in html
+
+    def test_signed_out_person_gets_a_try_again_link_to_sign_in(self):
+        from django.test import Client
+
+        c = Client(enforce_csrf_checks=True)
+        response = c.post(reverse("accounts:login"), {"csrfmiddlewaretoken": "stale", "username": "x", "password": "y"})
+        assert response.status_code == 403
+        assert f'href="{reverse("accounts:login")}"' in response.content.decode()

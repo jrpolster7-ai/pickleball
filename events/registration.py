@@ -38,7 +38,7 @@ def join(event, player) -> Registration:
     if existing:
         return existing
     # Lock the event row so two people can't take the last spot at once (PostgreSQL).
-    event = Event.objects.select_for_update().select_related("division").get(pk=event.pk)
+    event = Event.objects.select_for_update(of=("self",)).select_related("division").get(pk=event.pk)
     problem = self_join_problem(event, player)
     if problem:
         raise RegistrationError(problem)
@@ -51,7 +51,7 @@ def admin_add(event, player, *, override: bool = False) -> Registration:
     existing = Registration.objects.filter(event=event, player=player).first()
     if existing:
         return existing
-    event = Event.objects.select_for_update().select_related("division").get(pk=event.pk)
+    event = Event.objects.select_for_update(of=("self",)).select_related("division").get(pk=event.pk)
     if not override:
         if active_count(event) >= event.player_capacity:
             raise RegistrationError("This event is full. Tick 'override' to add them anyway.")
