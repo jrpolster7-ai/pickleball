@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from core import audit
 from events import rules
+from events import notices
 from events.codes import new_code
 from events.models import MAX_COURTS, Event, Registration, Side
 
@@ -254,6 +255,7 @@ def publish(event: Event, seed: int, actor=None) -> Preview:
     event.schedule_seed = seed
     event.save(update_fields=["schedule_seed", "updated_at"])
     audit.log(actor, "schedule published", event, new=f"seed {seed}, {len(match_rows)} matches", event=event)
+    notices.post(event, "The schedule is out! Check your matches.")
     return preview
 
 
@@ -290,6 +292,7 @@ def clear(event: Event, actor=None) -> None:
     event.schedule_seed = None
     event.save(update_fields=["schedule_seed", "updated_at"])
     audit.log(actor, "schedule cleared", event, old=f"{count} matches", event=event)
+    notices.post(event, "The schedule was taken down. A new one is coming soon.")
 
 
 @transaction.atomic
@@ -307,6 +310,17 @@ def start_play(event: Event, actor=None) -> None:
 
 # --- Editing times and courts ---------------------------------------------
 
+def _clock(dt: datetime.datetime) -> str:
+    """'7:15 PM' in Central time."""
+    local = timezone.localtime(dt)
+    return local.strftime("%I:%M %p").lstrip("0")
+
+
+def _round_name(rnd) -> str:
+    week = f"Week {rnd.session.week}, " if rnd.event.is_multi_week else ""
+    return f"{week}{rnd.label or f'Round {rnd.number}'}"
+
+
 def _fmt(dt: datetime.datetime) -> str:
     return timezone.localtime(dt).strftime("%Y-%m-%d %I:%M %p")
 
@@ -320,6 +334,7 @@ def set_round_time(rnd: Round, new_time: datetime.time, actor=None) -> None:
     rnd.save(update_fields=["start_time"])
     rnd.matches.update(start_time=new_start)
     audit.log(actor, "round time changed", rnd, old=_fmt(old), new=_fmt(new_start), event=rnd.event)
+    notices.post(rnd.event, f"{_round_name(rnd)} now starts at {_clock(new_start)}.")
 
 
 def _first_start_for(date: datetime.date, time: datetime.time) -> datetime.datetime:
@@ -340,6 +355,7 @@ def edit_match(match: Match, *, start_time: datetime.time, court: int, actor=Non
     match.start_time = new_start
     match.save(update_fields=["court", "start_time"])
     audit.log(actor, "match edited", match, old=old, new=f"court {court}, {_fmt(new_start)}", event=match.event)
+    notices.post(match.event, f"{_round_name(match.round)}: {match.label_a} vs {match.label_b} is now on court {court} at {_clock(new_start)}.")
 
 
 @transaction.atomic
@@ -359,6 +375,7 @@ def retime(event: Event, actor=None) -> None:
             rnd.matches.update(start_time=rnd.start_time)
     audit.log(actor, "times recalculated", event,
               new=f"{event.minutes_per_match} min matches, {event.break_minutes} min breaks", event=event)
+    notices.post(event, "Match times were updated. Check your schedule for the new times.")
 
 
 # --- Reading a saved schedule ---------------------------------------------

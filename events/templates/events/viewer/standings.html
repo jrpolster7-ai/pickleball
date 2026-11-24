@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Standings · {{ event.title }}{% endblock %}
+{% block content %}
+  {% include "events/viewer/_header.html" %}
+
+  <div class="mt-6 flex flex-wrap gap-2" role="group" aria-label="Ranking type">
+    <a href="?view=wins" class="{% if view == 'wins' %}btn-primary{% else %}btn-secondary{% endif %} btn-small max-sm:w-auto" {% if view == 'wins' %}aria-current="page"{% endif %}>Wins and losses</a>
+    <a href="?view=points" class="{% if view == 'points' %}btn-primary{% else %}btn-secondary{% endif %} btn-small max-sm:w-auto" {% if view == 'points' %}aria-current="page"{% endif %}>Total points</a>
+  </div>
+  <p class="help">
+    {% if view == 'points' %}Ranked by total points scored, then wins, then point difference (+/−).
+    {% else %}Ranked by wins, then total points scored, then point difference (+/−).{% endif %}
+    T means tied.{% if event.is_multi_week %} All weeks are added up.{% endif %}
+    {% if audience == "spectator" %} Includes rounds where every match is final.{% endif %}
+  </p>
+
+  <div class="mt-4 grid items-start gap-6 {% if pools %}lg:grid-cols-2{% endif %}">
+    <section class="card">
+      <h2>{% if pools %}Everyone{% else %}Rankings{% endif %}</h2>
+      <div class="mt-3">{% include "standings/_table.html" with show_pool=pools %}</div>
+    </section>
+    {% if pools %}
+      <div class="space-y-6">
+        {% for name, pool_rows in pools %}
+          <section class="card">
+            <h2>{{ name }}</h2>
+            <div class="mt-3">{% include "standings/_table.html" with rows=pool_rows show_pool=False %}</div>
+          </section>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import public_views, views
 
 app_name = "events"
 
@@ -8,10 +8,15 @@ urlpatterns = [
     # Codes: one join box for player, spectator, and team codes.
     path("join/", views.join_enter, name="join_enter"),
     path("join/<str:code>/", views.join_code, name="join_code"),
-    path("watch/<str:code>/", views.watch, name="watch"),
+    path("watch/<str:code>/", public_views.watch, name="watch"),
+    path("watch/<str:code>/standings/", public_views.watch_standings, name="watch_standings"),
+    path("watch/<str:code>/bracket/", public_views.watch_bracket, name="watch_bracket"),
 
     # Players
     path("events/<int:pk>/", views.event_detail, name="event_detail"),
+    path("events/<int:pk>/rounds/", public_views.event_rounds, name="event_rounds"),
+    path("events/<int:pk>/standings/", public_views.event_standings, name="event_standings"),
+    path("events/<int:pk>/bracket/", public_views.event_bracket, name="event_bracket"),
     path("events/<int:pk>/team/<str:action>/", views.team_action, name="team_action"),
     path("invites/<int:invite_pk>/<str:action>/", views.invite_action, name="invite_action"),
 

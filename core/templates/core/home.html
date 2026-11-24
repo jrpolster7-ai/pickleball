@@ -29,7 +29,10 @@
             <div class="mt-3 grid gap-3 sm:grid-cols-2">
               {% for reg in registrations %}
                 <a href="{% url 'events:event_detail' reg.event.pk %}" class="card block no-underline">
-                  <span class="block text-lg font-semibold text-court">{{ reg.event.title }}</span>
+                  <span class="flex items-start justify-between gap-2">
+                    <span class="block text-lg font-semibold text-court">{{ reg.event.title }}</span>
+                    {% if reg.new_notices %}<span class="chip shrink-0 bg-ball font-semibold text-court">{{ reg.new_notices }} new</span>{% endif %}
+                  </span>
                   <span class="mt-1 block text-sm">{{ reg.event.level }} · {{ reg.event.division }}</span>
                   <span class="block text-sm">{{ reg.event.start_date|date:"D, M j" }}{% if reg.event.is_multi_week %} · {{ reg.event.weeks }} weeks{% endif %}</span>
                 </a>

@@ -13,7 +13,7 @@ from accounts.services import player_for
 from core.codes import normalize
 from core.decorators import admin_required
 
-from . import codes, defaults, registration, rules, teams
+from . import codes, defaults, notices, public_views, registration, rules, teams
 from .forms import (
     AdminAddPlayerForm,
     BuildTeamForm,
@@ -306,13 +306,6 @@ def join_code(request, code):
     })
 
 
-def watch(request, code):
-    match = codes.find_code(code)
-    if not match or match.kind != codes.SPECTATOR or not match.enabled:
-        return render(request, "events/watch_missing.html", status=404)
-    return render(request, "events/watch.html", {"event": match.event})
-
-
 # --- Player views ---------------------------------------------------------
 
 @login_required
@@ -327,10 +320,14 @@ def event_detail(request, pk):
         side__event=event, player=player, status=TeamInvite.Status.PENDING
     ).select_related("invited_by")
     sent = side.invites.filter(status=TeamInvite.Status.PENDING).select_related("player") if side else []
+    my_matches = _my_matches(event, player)
     return render(request, "events/event_detail.html", {
         "event": event,
         "player": player,
-        "my_matches": _my_matches(event, player),
+        "my_matches": my_matches,
+        "next_match": next((row for row in my_matches if not row[0].is_final), None),
+        "notices": notices.for_player(event, player),
+        "nav": public_views.nav(event, "player", "mine"),
         "side": side,
         "invites": invites,
         "sent_invites": sent,
@@ -356,7 +353,9 @@ def _my_matches(event, player):
     rows = []
     for match in matches:
         state = player_view(match, player)
-        rows.append((match, state, match.side_b if state.side == "A" else match.side_a))
+        own, other = (match.side_a, match.side_b) if state.side == "A" else (match.side_b, match.side_a)
+        partner = " & ".join(p.full_name for p in own.players.all() if p.pk != player.pk) if own else ""
+        rows.append((match, state, other, partner))
     return rows
 
 
@@ -430,4 +429,7 @@ def my_events_context(user) -> dict:
         TeamInvite.objects.filter(player=player, status=TeamInvite.Status.PENDING)
         .select_related("side__event", "invited_by")
     )
+    regs = list(regs)
+    for reg in regs:
+        reg.new_notices = notices.unseen_count(reg)
     return {"registrations": regs, "invites": invites, "player": player}

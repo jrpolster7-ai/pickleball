@@ -274,6 +274,7 @@ class Registration(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     pool = models.PositiveSmallIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    notices_seen_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["player__last_name", "player__first_name"]
@@ -319,6 +320,14 @@ class Side(models.Model):
         return f"Team {self.slot} (open spot)" if self.slot else "Empty team"
 
     @property
+    def public_name(self) -> str:
+        """First names and last initials, for spectators (section 10)."""
+        names = [p.public_name for p in self.players.all()]
+        if names:
+            return " & ".join(names)
+        return f"Team {self.slot}" if self.slot else "To be decided"
+
+    @property
     def is_scheduled(self) -> bool:
         return self.slot is not None
 
@@ -342,3 +351,17 @@ class TeamInvite(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class Notice(models.Model):
+    """An in-app message to an event's players about a schedule change (section 10)."""
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="notices")
+    message = models.CharField(max_length=300)
+    created = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created", "-id"]
+
+    def __str__(self):
+        return self.message

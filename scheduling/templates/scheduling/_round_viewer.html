@@ -1,0 +1,68 @@
+{# The round viewer (section 10). Takes panels, current, audience, event.
+   Tabs are plain links (?round=N), so it works without JavaScript.
+   round-viewer.js adds instant switching, arrow keys, and swiping. #}
+{% load static %}
+{% if panels %}
+<div class="round-viewer" data-round-viewer>
+  <div class="flex items-center gap-2">
+    <a href="?round={% if current > 1 %}{{ current|add:-1 }}{% else %}1{% endif %}" class="btn-secondary btn-small shrink-0 max-sm:w-auto" data-prev aria-label="Previous round" {% if current == 1 %}aria-disabled="true"{% endif %}>←<span class="max-md:sr-only"> Previous</span></a>
+    <div class="min-w-0 flex-1 overflow-x-auto" data-tab-scroller>
+      <div class="flex w-max gap-1 py-1" role="tablist" aria-label="Rounds">
+        {% for panel in panels %}
+          {% if event.is_multi_week and panel.number == 1 %}
+            <span class="flex items-center px-2 text-xs font-bold uppercase tracking-wide text-stone-500" aria-hidden="true">Week {{ panel.week }}</span>
+          {% endif %}
+          <a href="?round={{ panel.index }}" role="tab" id="round-tab-{{ panel.index }}" aria-controls="round-panel-{{ panel.index }}"
+             aria-selected="{% if panel.index == current %}true{% else %}false{% endif %}" data-tab="{{ panel.index }}"
+             class="round-tab relative whitespace-nowrap rounded-lg border-2 px-3 py-1.5 text-sm font-semibold no-underline pointer-coarse:py-2.5
+                    {% if panel.index == current %}border-court bg-court text-white{% else %}border-line bg-white text-court hover:border-court{% endif %}">
+            {% if event.is_multi_week %}<span class="sr-only">Week {{ panel.week }}, </span>{% endif %}Round {{ panel.number }}
+            {% if panel.done and panel.revealed %}<span aria-label="finished">✓</span>{% endif %}
+            {% if panel.has_mine %}<span class="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-ball ring-2 ring-white" title="You play this round"></span><span class="sr-only"> (you play)</span>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+    <a href="?round={% if current < panels|length %}{{ current|add:1 }}{% else %}{{ current }}{% endif %}" class="btn-secondary btn-small shrink-0 max-sm:w-auto" data-next aria-label="Next round" {% if current == panels|length %}aria-disabled="true"{% endif %}><span class="max-md:sr-only">Next </span>→</a>
+  </div>
+  <p class="help">Use the tabs, the arrow buttons, or your keyboard's ← → keys.<span class="pointer-fine:hidden"> You can also swipe.</span></p>
+
+  {% for panel in panels %}
+    <section role="tabpanel" id="round-panel-{{ panel.index }}" aria-labelledby="round-tab-{{ panel.index }}" data-panel="{{ panel.index }}"
+             class="card mt-3" {% if panel.index != current %}hidden{% endif %}>
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-xl">{% if event.is_multi_week %}Week {{ panel.week }} · {% endif %}Round {{ panel.number }}</h2>
+        <p class="font-semibold">{{ panel.start_time|date:"D, M j" }} · {{ panel.start_time|time:"g:i A" }}</p>
+      </div>
+      {% if audience == "spectator" and not panel.revealed %}
+        <p class="mt-2 rounded-lg bg-mist px-3 py-2 text-sm">Scores show here once every match in this round is final.</p>
+      {% endif %}
+      <table class="table mt-3">
+        <thead><tr><th class="w-16">Court</th><th class="max-sm:hidden w-24">Time</th><th>Matchup</th><th class="text-right">Score</th></tr></thead>
+        <tbody>
+          {% for m in panel.matches %}
+            <tr class="{% if m.mine %}bg-ball/20{% endif %}">
+              <td><span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-court text-lg font-bold text-white">{{ m.court }}</span></td>
+              <td class="max-sm:hidden">{{ m.start_time|time:"g:i A" }}</td>
+              <td>
+                <span class="block {% if m.winner == 'A' %}font-bold text-court{% endif %}">{{ m.side_a }}</span>
+                <span class="block text-xs uppercase text-stone-500">vs</span>
+                <span class="block {% if m.winner == 'B' %}font-bold text-court{% endif %}">{{ m.side_b }}</span>
+                {% if m.pool %}<span class="chip mt-1">{{ m.pool }}</span>{% endif %}
+                <span class="block text-sm sm:hidden">{{ m.start_time|time:"g:i A" }}</span>
+              </td>
+              <td class="text-right">
+                {% if m.score %}<span class="font-bold">{{ m.score }}</span>{% elif m.note %}<span class="text-sm">{{ m.note }}</span>{% endif %}
+                {% if m.link %}<a href="{{ m.link }}" class="link mt-1 block text-sm">{% if audience == "admin" %}Score{% elif m.score %}Details{% else %}Enter score{% endif %}</a>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endfor %}
+</div>
+<script src="{% static 'js/round-viewer.js' %}" defer></script>
+{% else %}
+  <div class="card mt-3"><p>The schedule isn't out yet. Check back soon!</p></div>
+{% endif %}

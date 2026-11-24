@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -8,21 +7,13 @@ from django.views.decorators.http import require_POST
 
 from core.decorators import admin_required
 from events.models import Event
+from scheduling.models import Match
 from standings import services as standings_services
 
-from . import services
+from . import display, services
 from .brackets import BracketError, Feed, feed_label
+from .display import Cell as PreviewMatch
 from .forms import AdvanceForm
-
-
-@dataclass
-class PreviewMatch:
-    """A bracket match before it exists, for the preview."""
-
-    label_a: str
-    label_b: str
-    seed_a: int | None = None
-    seed_b: int | None = None
 
 
 def _bracket_url(pk, count=None) -> str:
@@ -56,15 +47,15 @@ def bracket(request, pk):
     if event.is_scramble:
         return render(request, "brackets/bracket.html", {"event": event, "scramble": True})
 
-    sections = services.bracket_sections(event)
+    sections, champion, third = display.sections(event, display.ADMIN)
     if sections:
-        matches = [m for _, rounds in sections for _, ms in rounds for m in ms]
+        bracket_matches = event.matches.filter(stage=Match.Stage.BRACKET)
         return render(request, "brackets/bracket.html", {
             "event": event,
             "sections": sections,
-            "champion": services.champion(event),
-            "third": services.third_place(event),
-            "can_delete": not any(m.status != "SCHEDULED" for m in matches),
+            "champion": champion,
+            "third": third,
+            "can_delete": not bracket_matches.exclude(status=Match.Status.SCHEDULED).exists(),
         })
 
     table = standings_services.table(event)

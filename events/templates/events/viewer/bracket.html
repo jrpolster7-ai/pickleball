@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Bracket · {{ event.title }}{% endblock %}
+{% block content %}
+  {% include "events/viewer/_header.html" %}
+
+  {% if champion %}
+    <div class="mt-6 flex flex-wrap gap-4">
+      <div class="rounded-xl border-2 border-ball-dark bg-ball/30 px-5 py-4">
+        <p class="text-sm font-semibold uppercase tracking-wide text-court">Champions 🏆</p>
+        <p class="text-2xl font-bold text-court">{{ champion }}</p>
+      </div>
+      {% if third %}
+        <div class="rounded-xl border border-line bg-white px-5 py-4">
+          <p class="text-sm font-semibold uppercase tracking-wide text-stone-500">Third place</p>
+          <p class="text-xl font-bold text-court">{{ third }}</p>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% for section, rounds in sections %}
+    <div class="mt-6">
+      {% if section %}<h2 class="mb-3">{{ section }}</h2>{% endif %}
+      {% include "brackets/_bracket.html" %}
+    </div>
+  {% empty %}
+    <div class="card mt-6"><p>The bracket isn't set yet. It's built after the round robin.</p></div>
+  {% endfor %}
+  {% if sections %}
+    <p class="help">
+      {% if event.bracket_type == "DOUBLE" %}Lose twice and you're out. If the losers bracket winner wins the grand final, a reset match decides it.{% else %}Lose once and you're out.{% endif %}
+      {% if audience == "spectator" %} Results show once every match in their time slot is final.{% endif %}
+      {% if audience == "player" %} Your matches are highlighted.{% endif %}
+    </p>
+  {% endif %}
+{% endblock %}

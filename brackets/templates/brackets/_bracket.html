@@ -1,29 +1,26 @@
-{# Bracket columns, one per round, left to right. Takes rounds = [(name, matches)] and live (bool). #}
+{# Bracket columns, one per round, left to right. Takes rounds = [(name, cells)].
+   A cell has label_a, label_b, seed_a, seed_b, winner, footer, link, mine, alert
+   (see brackets/display.py Cell and the preview in brackets/views.py). #}
 <div class="overflow-x-auto pb-2">
   <div class="flex min-w-max items-stretch gap-4">
-    {% for name, matches in rounds %}
+    {% for name, cells in rounds %}
       <section class="flex w-60 flex-col" aria-label="{{ name }}">
         <h3 class="mb-3 rounded-lg bg-court px-3 py-2 text-center font-semibold text-white">{{ name }}</h3>
         <div class="flex flex-1 flex-col justify-around gap-3">
-          {% for m in matches %}
-            <div class="rounded-xl border border-line bg-white shadow-sm">
-              {% for side in "AB" %}
-                {% if side == "A" %}{% with label=m.label_a seed=m.seed_a %}
-                  <div class="flex items-center justify-between gap-2 px-3 py-2 {% if live and m.winner == 'A' %}bg-ball/30 font-bold{% endif %}">
-                    <span class="truncate">{% if seed %}<span class="mr-1 text-sm text-stone-500">{{ seed }}</span>{% endif %}{{ label }}</span>
-                  </div>
-                {% endwith %}{% else %}{% with label=m.label_b seed=m.seed_b %}
-                  <div class="flex items-center justify-between gap-2 border-t border-line px-3 py-2 {% if live and m.winner == 'B' %}bg-ball/30 font-bold{% endif %}">
-                    <span class="truncate">{% if seed %}<span class="mr-1 text-sm text-stone-500">{{ seed }}</span>{% endif %}{{ label }}</span>
-                  </div>
-                {% endwith %}{% endif %}
-              {% endfor %}
-              {% if live %}
-                <a href="{% url 'scoring:admin_match' event.pk m.pk %}" class="block border-t border-line px-3 py-1.5 text-sm hover:bg-mist">
-                  {% if m.is_final %}<strong>{{ m.score }}</strong>{% if m.forfeit %} (forfeit){% endif %}
-                  {% elif m.status == "DISPUTED" %}<span class="font-bold text-alert">Disputed</span>
-                  {% else %}Court {{ m.court }} · {{ m.start_time|time:"g:i A" }}{% endif %}
-                </a>
+          {% for m in cells %}
+            <div class="rounded-xl border bg-white shadow-sm {% if m.mine %}border-2 border-ball-dark{% else %}border-line{% endif %}">
+              <div class="flex items-center gap-2 px-3 py-2 {% if m.winner == 'A' %}bg-ball/30 font-bold{% endif %}">
+                {% if m.seed_a %}<span class="text-sm text-stone-500">{{ m.seed_a }}</span>{% endif %}
+                <span class="truncate" title="{{ m.label_a }}">{{ m.label_a }}</span>
+              </div>
+              <div class="flex items-center gap-2 border-t border-line px-3 py-2 {% if m.winner == 'B' %}bg-ball/30 font-bold{% endif %}">
+                {% if m.seed_b %}<span class="text-sm text-stone-500">{{ m.seed_b }}</span>{% endif %}
+                <span class="truncate" title="{{ m.label_b }}">{{ m.label_b }}</span>
+              </div>
+              {% if m.link %}
+                <a href="{{ m.link }}" class="block border-t border-line px-3 py-1.5 text-sm hover:bg-mist {% if m.alert %}font-bold text-alert{% endif %}">{{ m.footer|default:"Details" }}</a>
+              {% elif m.footer %}
+                <p class="border-t border-line px-3 py-1.5 text-sm {% if m.alert %}font-bold text-alert{% endif %}">{{ m.footer }}</p>
               {% endif %}
             </div>
           {% endfor %}

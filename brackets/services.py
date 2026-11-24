@@ -10,6 +10,7 @@ from django.db.models import Max, Prefetch
 from django.utils import timezone
 
 from core import audit
+from events import notices
 from events.models import BracketSizing, BracketType, Event, Side
 from scheduling.models import Match, Round, Session
 from standings import services as standings_services
@@ -137,6 +138,7 @@ def build(event: Event, count: int, actor=None, *, date=None, start=None) -> lis
     event.status = Event.Status.BRACKET
     event.save(update_fields=["advancing_count", "status", "updated_at"])
     audit.log(actor, "bracket built", event, new=f"{count} teams, {len(by_key)} matches", event=event)
+    notices.post(event, f"The bracket is set! The top {count} teams advance.")
     return list(by_key.values())
 
 
@@ -158,6 +160,7 @@ def delete(event: Event, actor=None) -> None:
     event.status = Event.Status.ROUND_ROBIN
     event.save(update_fields=["advancing_count", "status", "updated_at"])
     audit.log(actor, "bracket removed", event, event=event)
+    notices.post(event, "The bracket was taken down. A new one is coming soon.")
 
 
 # --- Results move teams along ---------------------------------------------
@@ -227,6 +230,8 @@ def _ensure_reset(grand_final: Match) -> Match:
     last_number = rnd.session.rounds.aggregate(m=Max("number"))["m"]
     slot = Round.objects.create(event=event, session=rnd.session, number=last_number + 1,
                                 start_time=rnd.start_time + step, label="Grand final reset")
+    notices.post(event, f"The grand final goes to a reset match at {timezone.localtime(slot.start_time):%I:%M %p}."
+                        .replace(" 0", " "))
     return Match.objects.create(
         event=event, round=slot, court=1, start_time=slot.start_time, stage=Match.Stage.BRACKET,
         bracket_round=2, bracket_slot=1, bracket_side=FINAL, bracket_label="Grand final reset",
@@ -247,7 +252,7 @@ def _remove_reset(event: Event) -> None:
         rnd.delete()
 
 
-def _deciding_match(event: Event) -> Match | None:
+def deciding_match(event: Event) -> Match | None:
     """The match whose winner is champion: the final, or the grand final (or its reset)."""
     bracket = event.matches.filter(stage=Match.Stage.BRACKET).select_related("side_a", "side_b")
     reset = bracket.filter(bracket_side=FINAL, bracket_round=2).first()
@@ -260,7 +265,7 @@ def _deciding_match(event: Event) -> Match | None:
 
 
 def _update_complete(event: Event) -> None:
-    deciding = _deciding_match(event)
+    deciding = deciding_match(event)
     third = event.matches.filter(stage=Match.Stage.BRACKET, third_place=True).first()
     done = bool(deciding and deciding.is_final and (third is None or third.is_final))
     status = Event.Status.COMPLETE if done else Event.Status.BRACKET
@@ -270,7 +275,7 @@ def _update_complete(event: Event) -> None:
 
 
 def champion(event: Event) -> Side | None:
-    deciding = _deciding_match(event)
+    deciding = deciding_match(event)
     return deciding.winning_side if deciding and deciding.is_final else None
 
 

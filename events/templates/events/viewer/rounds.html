@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Rounds · {{ event.title }}{% endblock %}
+{% block content %}
+  {% include "events/viewer/_header.html" %}
+  <div class="mt-6">
+    {% if audience == "player" %}<p class="help mb-2">Your matches are highlighted. A yellow dot means you play that round.</p>{% endif %}
+    {% include "scheduling/_round_viewer.html" %}
+  </div>
+{% endblock %}

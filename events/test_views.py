@@ -255,7 +255,7 @@ class TestJoin:
         html = response.content.decode()
         assert response.status_code == 200
         assert "Spring Fling" in html
-        assert "Spectator view" in html
+        assert "Following as a spectator" in html
 
     def test_disabled_spectator_code(self, client, make_event):
         e = make_event(spectator_code_enabled=False)

@@ -42,16 +42,25 @@ class Table:
 def _round_robin_matches(event: Event):
     return (
         Match.objects.filter(event=event, stage=Match.Stage.ROUND_ROBIN)
-        .only("id", "side_a_id", "side_b_id", "status", "winner")
+        .only("id", "round_id", "side_a_id", "side_b_id", "status", "winner")
         .prefetch_related(Prefetch("games", queryset=Game.objects.only("match_id", "side_a_points", "side_b_points")))
     )
 
 
-def table(event: Event) -> Table:
-    """Every round robin result added up. Multi-week events sum all weeks."""
+def table(event: Event, *, spectator: bool = False) -> Table:
+    """Every round robin result added up. Multi-week events sum all weeks.
+
+    For spectators, only rounds where every match is final count, and names
+    are first name and last initial (section 10).
+    """
     matches = list(_round_robin_matches(event))
     final = [m for m in matches if m.status == Match.Status.CONFIRMED]
     remaining = len(matches) - len(final)
+    if spectator:
+        from scheduling.display import revealed_round_ids
+
+        revealed = revealed_round_ids(event)
+        final = [m for m in final if m.round_id in revealed]
 
     if event.is_scramble:
         Through = Side.players.through
@@ -66,7 +75,7 @@ def table(event: Event) -> Table:
                           tuple((g.side_a_points, g.side_b_points) for g in m.games.all()), m.winner)
                    for m in final]
         rows = standings.tally(results, [p.pk for p in players])
-        names = {p.pk: p.full_name for p in players}
+        names = {p.pk: (p.public_name if spectator else p.full_name) for p in players}
         for key, row in rows.items():
             row.extra = {"label": names.get(key, "Former player"), "pool": "", "tiebreak": None}
         return Table(event=event, rows=list(rows.values()), pools=[], remaining=remaining)
@@ -79,7 +88,8 @@ def table(event: Event) -> Table:
     by_id = {s.pk: s for s in sides}
     for key, row in rows.items():
         side = by_id[key]
-        row.extra = {"label": side.name, "slot": side.slot, "tiebreak": side.tiebreak,
+        row.extra = {"label": side.public_name if spectator else side.name, "slot": side.slot,
+                     "tiebreak": side.tiebreak,
                      "pool": pool_name(side.pool - 1) if side.pool else ""}
     pool_groups: dict[str, list[Row]] = {}
     for row in rows.values():
