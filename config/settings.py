@@ -38,6 +38,10 @@ if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
 
+# The name shown in the header and browser tabs. Also hard-coded in templates/500.html.
+SITE_NAME = "Dinkology"
+
+
 # --- Applications ---------------------------------------------------------
 
 INSTALLED_APPS = [
@@ -83,6 +87,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.site",
             ],
         },
     },

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0F5C4D">
-  <title>{% block title %}Pickleball{% endblock %}</title>
+  <title>{% block title %}{{ brand_name }}{% endblock %}</title>
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
@@ -16,8 +16,8 @@
     <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-1 px-6 py-3 max-sm:px-4">
       <a href="{% url 'core:home' %}" class="flex min-h-10 items-center gap-3 no-underline">
         {# Logo slot. Swap this span for an <img> when Mrs. Carter supplies a logo. #}
-        <span class="logo-slot grid h-10 w-10 place-items-center rounded-full bg-ball font-bold text-court" aria-hidden="true">P</span>
-        <span class="text-xl font-semibold">Pickleball</span>
+        <span class="logo-slot grid h-10 w-10 place-items-center rounded-full bg-ball font-bold text-court" aria-hidden="true">{{ brand_name|first }}</span>
+        <span class="text-xl font-semibold">{{ brand_name }}</span>
       </a>
       <nav class="ml-auto flex items-center gap-6 font-semibold max-sm:gap-4 max-sm:text-sm" aria-label="Main">
         {% if user.is_authenticated %}

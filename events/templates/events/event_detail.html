@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ event.title }} · Pickleball{% endblock %}
+{% block title %}{{ event.title }} · {{ brand_name }}{% endblock %}
 {% block content %}
   {% include "events/viewer/_header.html" with audience="player" %}
   <p class="mt-2 text-sm">{{ event.start_date|date:"D, M j, Y" }}{% if event.is_multi_week %} · {{ event.weeks }} weeks on {{ event.get_weekly_day_display }}s{% endif %} · {{ event.start_time|time:"g:i A" }}</p>

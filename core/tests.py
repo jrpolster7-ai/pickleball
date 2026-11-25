@@ -188,3 +188,12 @@ def test_score_lock_sql_is_valid_for_postgresql():
     qs = Match.objects.select_for_update(of=("self",)).select_related("event", "side_a", "side_b", "round")
     sql = qs.filter(pk=1).query.get_compiler(connection=pg).as_sql()[0]
     assert sql.endswith('FOR UPDATE OF "scheduling_match"')
+
+
+@pytest.mark.django_db
+def test_site_name_in_header_and_tab(client):
+    html = client.get("/").content.decode()
+    assert "<title>Dinkology</title>" in html
+    assert '<span class="text-xl font-semibold">Dinkology</span>' in html
+    assert "Pickleball</span>" not in html
+    assert "Sign in · Dinkology" in client.get(reverse("accounts:login")).content.decode()
